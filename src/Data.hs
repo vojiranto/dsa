@@ -60,7 +60,7 @@ data Imagination = Imagination !Diameter ![Ceil] deriving Eq
 data Stratification = Stratification {
     d1 :: !Diameter,
     d2 :: !Diameter,
-    imagination :: ![(Ceil,[Int])]
+    imagination :: ![Ceil3]
   } deriving Eq
 
 type Graf node key  = [(node, key, [key])]
