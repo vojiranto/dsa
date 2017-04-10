@@ -51,6 +51,9 @@ createSt = St {
 data Ceil = Ceil !Int !Int
   deriving (Eq, Ord, Show)
 
+data Ceil3 = Ceil3 !Ceil !Int
+  deriving (Eq, Ord, Show)
+
 data Imagination = Imagination !Diameter ![Ceil] deriving Eq
 
 -- Расслоение
