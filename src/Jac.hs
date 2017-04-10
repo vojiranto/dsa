@@ -4,8 +4,9 @@
 
 module Jac where
 
-import Data
 import Data.Matrix
+
+import Data
 
 
 type FPD = Point -> Double

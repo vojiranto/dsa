@@ -3,9 +3,10 @@ module Graph where
 
 import Data.Graph
 import Control.Parallel.Strategies
+import qualified Data.Set as Set
+
 import Shift
 import Data
-import qualified Data.Set as Set
 
 
 -- Строим бесконечную последовательность приблежений.
