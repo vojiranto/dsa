@@ -8,6 +8,13 @@ import Data
 import Graph
 import Jac
 
+stepStratification :: F Point-> F Stratification
+stepStratification fp (Stratification d1 d2 ls) = Stratification
+    d1 (d2*2) undefined
+  where
+    shifts = myNub $ shiftCeil d1 d2 fp <$> ls
+
+
 toStratification :: Imagination -> Stratification
 toStratification (Imagination d c) = Stratification
     d 2 (concatMap (\c -> [Ceil3 c 1, Ceil3 c 2]) c)
@@ -20,11 +27,11 @@ celling (Ceil3 c i) = [Ceil3 c (i*2), Ceil3 c (i*2-1)]
 shiftCeil :: Diameter -> Diameter -> F Point -> Ceil3 -> [Ceil3]
 shiftCeil d1 d2 fp (Ceil3 c l) = Ceil3 p' . (\i ->
     fromRad d2 $ arc $ signum $ toPoint $
-    jacobian * e i) <$> ls
+    jacobian * e i) <$> list
   where
     p' = toCeil d1 $ fp ceilCenter
 
-    ls = do
+    list = do
         let t = toRad d2 l
         x <- [t-d2, t-d2+d2/16..t]
         return x

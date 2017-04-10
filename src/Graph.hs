@@ -1,5 +1,15 @@
 {-#Language LambdaCase, BangPatterns#-}
-module Graph where
+module Graph (
+    formImagination,
+    stepImagination,
+    stepImagination',
+    cyclics,
+    fromRad,
+    toRad,
+    myNub,
+    fromCeil,
+    toCeil
+    ) where
 
 import Data.Graph
 import Control.Parallel.Strategies
