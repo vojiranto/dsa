@@ -12,7 +12,8 @@ stepStratification :: F Point-> F Stratification
 stepStratification fp (Stratification d1 d2 ls) = Stratification
     d1 (d2*2) undefined
   where
-    shifts = myNub $ shiftCeil d1 d2 fp <$> ls
+    shifts :: [Ceil3]
+    shifts = myNub.concat $ shiftCeil d1 d2 fp <$> ls
 
 
 toStratification :: Imagination -> Stratification
@@ -29,8 +30,10 @@ shiftCeil d1 d2 fp (Ceil3 c l) = Ceil3 p' . (\i ->
     fromRad d2 $ arc $ signum $ toPoint $
     jacobian * e i) <$> list
   where
+    p' :: Ceil
     p' = toCeil d1 $ fp ceilCenter
 
+    list :: [Double]
     list = do
         let t = toRad d2 l
         x <- [t-d2, t-d2+d2/16..t]
@@ -39,12 +42,15 @@ shiftCeil d1 d2 fp (Ceil3 c l) = Ceil3 p' . (\i ->
     -- ячеек.
     -- (fromCeil 1 $ Ceil 1 1)    == Point 1.0 1.0
     -- (toCeil 1 $ Point 0.4 0.4) == Ceil 1 1
+    ceilCenter :: Point
     ceilCenter = Point (x-d1/2) (y-d1/2)
 
     Point x y = fromCeil d1 c
 
+    jacobian :: Matrix Double
     jacobian = jac fp ceilCenter
 
+    arc :: Point -> Double
     arc (Point x y) = if
         | y > 0     -> acos x
         | otherwise -> acos x + pi
