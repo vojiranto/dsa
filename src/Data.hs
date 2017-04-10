@@ -52,6 +52,13 @@ data Ceil = Ceil !Int !Int
 
 data Imagination = Imagination !Diameter ![Ceil] deriving Eq
 
+-- Расслоение
+data Stratification = Stratification {
+    d1 :: !Diameter,
+    d2 :: !Diameter,
+    imagination :: ![(Ceil,[Int])]
+  } deriving Eq
+
 type Graf node key  = [(node, key, [key])]
 type Query a        = a -> Bool
 type Diameter       = Double
