@@ -1,4 +1,4 @@
-{-#Language TupleSections, MultiWayIf#-}
+{-#Language TupleSections, MultiWayIf, BangPatterns#-}
 module Stratification where
 
 -- Внешние импорты
@@ -10,11 +10,10 @@ import Jac
 
 stepStratification :: F Point-> F Stratification
 stepStratification fp (Stratification d1 d2 ls) = Stratification
-    d1 (d2*2) undefined
+    d1 (d2*2) $ concatMap celling $ cyclics $
+    (shiftCeil d1 d2 fp #=) <$> ls
   where
-    shifts :: [Ceil3]
-    -- XXX
-    shifts = myNub.concat $ shiftCeil d1 d2 fp <$> ls
+    (#=) !f !c = (c, c, f c)
 
 
 toStratification :: Imagination -> Stratification
@@ -27,7 +26,7 @@ celling (Ceil3 c i) = [Ceil3 c (i*2), Ceil3 c (i*2-1)]
 
 
 shiftCeil :: Diameter -> Diameter -> F Point -> Ceil3 -> [Ceil3]
-shiftCeil d1 d2 fp (Ceil3 c l) = Ceil3 p' . (\i ->
+shiftCeil d1 d2 fp (Ceil3 c l) = myNub $ Ceil3 p' . (\i ->
     fromRad d2 $ arc $ signum $ toPoint $
     jacobian * e i) <$> list
   where
