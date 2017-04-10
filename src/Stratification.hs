@@ -2,12 +2,13 @@
 module Stratification where
 
 -- Внешние импорты
-import Data.Matrix
+import Data.Matrix (Matrix(..))
 
 import Data
-import Graph
-import Jac
+import Graph (fromRad, toRad, fromCeil, toCeil, cyclics, myNub)
+import Jac (jac, e)
 
+-- Один шаг с подразбиением.
 stepStratification :: F Point-> F Stratification
 stepStratification fp (Stratification d1 d2 ls) = Stratification
     d1 (d2*2) $ concatMap celling $ cyclics $
@@ -19,6 +20,7 @@ stepStratification fp (Stratification d1 d2 ls) = Stratification
 toStratification :: Imagination -> Stratification
 toStratification (Imagination d c) = Stratification
     d 2 (concatMap (\c -> [Ceil3 c 1, Ceil3 c 2]) c)
+
 
 -- подразбиение на более мелкие уровни
 celling :: Ceil3 -> [Ceil3]

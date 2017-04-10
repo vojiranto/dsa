@@ -2,11 +2,14 @@
     MultiWayIf,
     FlexibleInstances #-}
 
-module Jac where
+module Jac (
+    jac,
+    e,
+    ) where
 
-import Data.Matrix
+import Data.Matrix (Matrix(..), fromLists, fromList, toList)
 
-import Data
+import Data (Points(..), Point(..), F)
 
 
 type FPD = Point -> Double
