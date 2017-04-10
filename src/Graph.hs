@@ -46,18 +46,23 @@ toCeil d (Point x y) = formCeil x y d
 -- Построение ячейки
 {-# INLINE formCeil #-}
 formCeil :: Double -> Double -> Diameter -> Ceil
-formCeil x y d = Ceil (f x) (f y)
-  where f x = ceiling $! x/d
+formCeil x y d = Ceil (fromRad d x) (fromRad d y)
 
 
 -- Получение по номеру ячейки её левого верхнего угла.
 {-# INLINE fromCeil #-}
 fromCeil :: Diameter -> Ceil -> Point
-fromCeil d (Ceil x y) = Point (f x) (f y)
-  where
-    {-# INLINE f #-}
-    f :: Int -> Double
-    f x = d * fromIntegral x
+fromCeil d (Ceil x y) = Point (toRad d x) (toRad d y)
+
+
+{-# INLINE fromRad #-}
+fromRad :: Diameter -> Double -> Int
+fromRad d x = ceiling $! x/ d
+
+
+{-# INLINE toRad #-}
+toRad :: Diameter -> Int -> Double
+toRad d x = d * fromIntegral x
 
 
 -- По ячейке и уровнениям формируем её образ.

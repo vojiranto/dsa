@@ -22,6 +22,7 @@ data Func =
 data Point = Point !Double !Double
   deriving (Eq, Show)
 
+
 data Space = Space Point Point
 
 data LabNumb =

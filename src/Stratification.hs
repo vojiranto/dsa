@@ -29,3 +29,10 @@ shiftCeil d1 d2 fp (c, l) = (toCeil d1 $ fp ceilCenter,
     ceilCenter = Point (x-d1/2) (y-d1/2)
 
     Point x y = fromCeil d1 c
+
+fromRad :: Diameter -> Double -> Int
+fromRad d x = ceiling $! x/ d
+
+
+toRad :: Diameter -> Int -> Double
+toRad d x = d * fromIntegral x
