@@ -24,6 +24,7 @@ shiftCeil d1 d2 fp (Ceil3 c l) = Ceil3 p' . (\i ->
   where
     p' = toCeil d1 $ fp ceilCenter
 
+    -- XXX Ошибка
     -- номера фрагментов окружности.
     ls = [l*2, l*2-1]
 
