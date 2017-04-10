@@ -13,6 +13,7 @@ import System.Exit ( exitWith, ExitCode(ExitSuccess) )
 import Graphics.UI.GLUT hiding ( initialize, shift)
 import Graphics.Rendering.OpenGL.GL.Tensor
 import Data.IORef
+import Stratification
 import Data.Char
 import Data.List
 import GrBuild

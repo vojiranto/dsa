@@ -17,6 +17,7 @@ library
   exposed-modules:     Lib
                      , Data
                      , GrBuild
+                     , Stratification
                      , Graph
                      , Quar
                      , Shift
