@@ -13,6 +13,7 @@ stepStratification fp (Stratification d1 d2 ls) = Stratification
     d1 (d2*2) undefined
   where
     shifts :: [Ceil3]
+    -- XXX
     shifts = myNub.concat $ shiftCeil d1 d2 fp <$> ls
 
 
