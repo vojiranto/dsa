@@ -18,7 +18,13 @@ celling :: [Int] -> [Int]
 celling = concatMap $! \c -> [c*2, c*2-1]
 
 
-shiftCeil :: Diameter -> Diameter -> F Point -> (Ceil,[Int])
-    -> [(Ceil, [Int])]
-shiftCeil d1 d2 fp  = undefined
+shiftCeil :: Diameter -> Diameter -> F Point -> F (Ceil,[Int])
+shiftCeil d1 d2 fp (c, l) = undefined
+  where
+    -- минус d/2 из-за особенностей отображения точек в номера
+    -- ячеек.
+    -- (fromCeil 1 $ Ceil 1 1)    == Point 1.0 1.0
+    -- (toCeil 1 $ Point 0.4 0.4) == Ceil 1 1
+    point = Point (x-d1/2) (y-d1/2)
 
+    Point x y = fromCeil d1 c
