@@ -20,14 +20,14 @@ celling (Ceil3 c i) = [Ceil3 c (i*2), Ceil3 c (i*2-1)]
 shiftCeil :: Diameter -> Diameter -> F Point -> Ceil3 -> [Ceil3]
 shiftCeil d1 d2 fp (Ceil3 c l) = Ceil3 p' . (\i ->
     fromRad d2 $ arc $ signum $ toPoint $
-    jacobian * (e $ toRad d2 i)) <$> ls
+    jacobian * e i) <$> ls
   where
     p' = toCeil d1 $ fp ceilCenter
 
-    -- XXX Ошибка
-    -- номера фрагментов окружности.
-    ls = [l*2, l*2-1]
-
+    ls = do
+        let t = toRad d2 l
+        x <- [t-d2, t-d2+d2/16..t]
+        return x
     -- минус d/2 из-за особенностей отображения точек в номера
     -- ячеек.
     -- (fromCeil 1 $ Ceil 1 1)    == Point 1.0 1.0
