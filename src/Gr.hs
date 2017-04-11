@@ -55,11 +55,7 @@ ok2k st (MouseButton LeftButton) Down _ _ = do
     print $ D.size ptch
 ok2k _ _ _ _ _ = return ()
 
-tempOf x = do
-    t1 <- getTime Realtime
-    x
-    t2 <- getTime Realtime
-    print $ diffTimeSpec t1 t2
+tempOf = void.tempOfD
 
 tempOfD x = do
     t1 <- getTime Realtime
