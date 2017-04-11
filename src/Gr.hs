@@ -42,7 +42,7 @@ ok2k st (MouseButton LeftButton) Down _ _ = do
         ptch :: [D.Point]
         ptch       = patch f [Gr.point x1 y1, Gr.point x2 y2] 1
         d          = 0.001
-    pt <- tempOfD . newIORef $ fromCeil d <$>
+    pt <- tempOf . newIORef $ fromCeil d <$>
          myNub (toCeil d <$> ptch)
     st $=! D.St {
         D.render  = do
@@ -55,9 +55,9 @@ ok2k st (MouseButton LeftButton) Down _ _ = do
     print $ D.size ptch
 ok2k _ _ _ _ _ = return ()
 
-tempOf = void.tempOfD
+tempOf_ = void.tempOf
 
-tempOfD x = do
+tempOf x = do
     t1 <- getTime Realtime
     d <- x
     t2 <- getTime Realtime
@@ -89,7 +89,7 @@ keyboardMouseHandler st (Char ' ') _ _ _ = do
             let d    = 0.001
                 ptch = patchStep (D.f st') pt
             print $ D.size ptch
-            pt <- tempOfD . newIORef $ fromCeil d <$>
+            pt <- tempOf . newIORef $ fromCeil d <$>
                 myNub (toCeil d <$> ptch)
             st $=! st' {
                  D.render = do
