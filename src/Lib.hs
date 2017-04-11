@@ -1,4 +1,4 @@
-{-#Language MultiWayIf, LambdaCase#-}
+{-#Language MultiWayIf, LambdaCase, TupleSections#-}
 module Lib (
     D.Imagination(..),
     D.Point(..),
