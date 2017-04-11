@@ -55,9 +55,12 @@ ok2k st (MouseButton LeftButton) Down _ _ = do
     print $ D.size ptch
 ok2k _ _ _ _ _ = return ()
 
+
 tempOf_ :: IO a -> IO ()
 tempOf_ = void.tempOf
 
+
+-- замеряем время.
 tempOf :: IO a -> IO a
 tempOf x = do
     let time = getTime Realtime
@@ -65,14 +68,18 @@ tempOf x = do
     print $ diffTimeSpec t1 t2
     return d
 
+
 shift :: String -> D.Point -> Double
 shift xs p = formEl (formLexTree xs) p
+
 
 point :: String -> String -> D.Point
 point x y = D.Point (read x) (read y)
 
+
 sp :: D.Space
 sp = D.Space (D.Point (-2) (-2)) (D.Point 2 2)
+
 
 keyboardMouseHandler :: IORef D.St -> KeyboardMouseCallback
 keyboardMouseHandler _  (Char 'q') _ _ _ = exitWith ExitSuccess

@@ -1,6 +1,7 @@
 {-# LANGUAGE
     MultiWayIf,
-    FlexibleInstances #-}
+    FlexibleInstances,
+    NumDecimals #-}
 
 module Jac (
     jac,
@@ -21,8 +22,8 @@ diff :: (Floating a, Eq a) => F a -> a -> a
 diff f x = (f (x - d/2) - f (x + d/2))/d
   where
     d = if
-        | x == 0    -> 1/10^9
-        | otherwise -> x/10^5
+        | x == 0    ->   1e-9
+        | otherwise -> x*1e-5
 
 
 -- якобиан.
