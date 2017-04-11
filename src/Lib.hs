@@ -8,7 +8,7 @@ module Lib (
 
 import System.Clock
 import Jac
-import Control.Monad ( unless, forM, void )
+import Control.Monad ( unless, forM, void, forM_)
 import System.Exit ( exitWith, ExitCode(ExitSuccess) )
 import Graphics.UI.GLUT hiding ( initialize, shift)
 import Graphics.Rendering.OpenGL.GL.Tensor
@@ -33,8 +33,8 @@ someFunc = grInit $ \win -> do
     reshapeCallback $= Just reshape
     keyboardMouseCallback $= Just (keyboardMouseHandler st)
 
-    createButton win (Position 0 0) (Size 100 30) (ok1k st)
-    createButton win (Position 0 40) (Size 100 30) (ok2k st)
+    forM_ [(0, ok1k), (40, ok2k)] $ \(i, call) ->
+        createButton win (Position 0 i) (Size 100 30) (call st)
 
 
 createButton win position size callback = do
