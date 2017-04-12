@@ -1,10 +1,12 @@
 {-#Language MultiWayIf, LambdaCase, BangPatterns#-}
 module Shift where
 
-import Data
 import Data.Char
 import Data.List
 import Data.Foldable
+
+import Data
+import Point
 import Quar
 
 -- функция для получения одной из координат

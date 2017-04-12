@@ -17,6 +17,7 @@ import qualified Data.Set as Set
 
 import Shift
 import Data
+import Point
 
 
 -- Строим бесконечную последовательность приблежений.

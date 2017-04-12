@@ -10,8 +10,8 @@ module Jac (
 
 import Data.Matrix (Matrix(..), fromLists, fromList, toList)
 
-import Data (Points(..), Point(..), F)
-
+import Point
+import Data (F)
 
 type FPD = Point -> Double
 

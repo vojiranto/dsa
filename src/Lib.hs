@@ -1,7 +1,7 @@
 {-#Language MultiWayIf, LambdaCase, TupleSections#-}
 module Lib (
-    D.Imagination(..),
-    D.Point(..),
+    Imagination(..),
+    Point(..),
     someFunc,
     formLexTree
   ) where
@@ -17,7 +17,8 @@ import Stratification
 import Data.Char
 import Data.List
 import GrBuild
-import qualified Data as D
+import Point
+import Data
 import Graph
 import Shift
 import Quar
@@ -27,7 +28,7 @@ import Morse
 someFunc :: IO ()
 someFunc = grInit $ \win -> do
     -- глобальная переменная для хранения состояния программы.
-    st  <- newIORef $ D.createSt
+    st  <- newIORef $ createSt
 
     displayCallback $= Gr.display st
     reshapeCallback $= Just reshape

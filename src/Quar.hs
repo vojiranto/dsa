@@ -8,6 +8,7 @@ module Quar ( patch
             , zonePoint) where
 
 import Data
+import Point
 --import Shift
 
 

@@ -1,6 +1,7 @@
 module GrBuild where
 
 import Data
+import Point
 import Graph
 
 form = 150

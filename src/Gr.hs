@@ -9,7 +9,8 @@ import System.Clock
 import Graph as G
 import Shift
 import Quar
-import qualified Data as D
+import Data
+import Point as P
 
 grInit func = do
     _ <- getArgsAndInitialize
@@ -20,39 +21,39 @@ grInit func = do
     func win
     mainLoop
 
-ok1k :: IORef D.St -> KeyboardMouseCallback
+ok1k :: IORef St -> KeyboardMouseCallback
 ok1k st (MouseButton LeftButton) Down _ _ = do
     fx:fy:x1:y1:x2:y2:_ <- form
-    let f p        = D.Point (Gr.shift fx p) (Gr.shift fy p)
-        sp         = D.Space (Gr.point x1 y1) (Gr.point x2 y2)
+    let f p        = P.Point (Gr.shift fx p) (Gr.shift fy p)
+        sp         =   Space (Gr.point x1 y1) (Gr.point x2 y2)
         (image, i) = formImagination f sp !! 0
     print i
-    st $=! D.St {
-        D.render  = renderIm image,
-        D.block   = False,
-        D.workLab = D.Lab1 image,
-        D.f       = f
+    st $=! St {
+        render  = renderIm image,
+        block   = False,
+        workLab = Lab1 image,
+        f       = f
       }
 ok1k _ _ _ _ _ = return ()
 
-ok2k :: IORef D.St -> KeyboardMouseCallback
+ok2k :: IORef St -> KeyboardMouseCallback
 ok2k st (MouseButton LeftButton) Down _ _ = do
     fx:fy:x1:y1:x2:y2:_ <- form
-    let f p        = D.Point (Gr.shift fx p) (Gr.shift fy p)
-        ptch :: [D.Point]
+    let f p        = P.Point (Gr.shift fx p) (Gr.shift fy p)
+        ptch :: [P.Point]
         ptch       = patch f [Gr.point x1 y1, Gr.point x2 y2] 1
         d          = 0.001
     pt <- tempOf . newIORef $ fromCeil d <$>
          myNub (toCeil d <$> ptch)
-    st $=! D.St {
-        D.render  = do
+    st $=! St {
+        render  = do
             ptch <- get pt
             renderPt ptch,
-        D.block   = False,
-        D.workLab = D.Lab2 ptch,
-        D.f       = f
+        block   = False,
+        workLab = Lab2 ptch,
+        f       = f
       }
-    print $ D.size ptch
+    print $ size ptch
 ok2k _ _ _ _ _ = return ()
 
 
@@ -69,41 +70,41 @@ tempOf x = do
     return d
 
 
-shift :: String -> D.Point -> Double
+shift :: String -> P.Point -> Double
 shift xs p = formEl (formLexTree xs) p
 
 
-point :: String -> String -> D.Point
-point x y = D.Point (read x) (read y)
+point :: String -> String -> P.Point
+point x y = P.Point (read x) (read y)
 
 
-sp :: D.Space
-sp = D.Space (D.Point (-2) (-2)) (D.Point 2 2)
+sp :: Space
+sp = Space (P.Point (-2) (-2)) (P.Point 2 2)
 
 
-keyboardMouseHandler :: IORef D.St -> KeyboardMouseCallback
+keyboardMouseHandler :: IORef St -> KeyboardMouseCallback
 keyboardMouseHandler _  (Char 'q') _ _ _ = exitWith ExitSuccess
 keyboardMouseHandler st (Char ' ') _ _ _ = do
     st' <- get st
-    case D.workLab st' of
-        D.Lab1 l -> do
-            let fIm = stepImagination' (D.f st') l
-            print $ D.size fIm
+    case workLab st' of
+        Lab1 l -> do
+            let fIm = stepImagination' (f st') l
+            print $ size fIm
             st $=! st' {
-                D.render = renderIm fIm,
-                D.workLab = D.Lab1 fIm
+                render = renderIm fIm,
+                workLab = Lab1 fIm
             }
-        D.Lab2 pt -> do
+        Lab2 pt -> do
             let d    = 0.001
-                ptch = patchStep (D.f st') pt
-            print $ D.size ptch
+                ptch = patchStep (f st') pt
+            print $ size ptch
             pt <- tempOf . newIORef $ fromCeil d <$>
                 myNub (toCeil d <$> ptch)
             st $=! st' {
-                 D.render = do
+                 render = do
                     ptch <- get pt
                     renderPt ptch,
-                 D.workLab = D.Lab2 ptch
+                 workLab = Lab2 ptch
                 }
         _ -> return ()
 keyboardMouseHandler _ _          _ _ _ = postRedisplay Nothing
@@ -123,13 +124,13 @@ reshape size@(Size width height) =
 --------------------------------------------------------------------------------
 -- Clear and redraw the scene.
 --------------------------------------------------------------------------------
-display :: IORef D.St -> DisplayCallback
+display :: IORef St -> DisplayCallback
 display var = do
     loadIdentity
     lookAt (Vertex3 0 0 1) (Vertex3 0 0 0) (Vector3 0 1 0)
     clear [ColorBuffer, DepthBuffer]
     color3f white >> axis 0 >> axis 90
-    tempOf $ join $ D.render <$> get var
+    tempOf $ join $ render <$> get var
     swapBuffers
 
 axis a = rotateObj a (Vector3 0 0 (1.0 :: GLfloat)) $ do
@@ -154,18 +155,18 @@ axis a = rotateObj a (Vector3 0 0 (1.0 :: GLfloat)) $ do
 
 rotateObj a b x = rotate a b >> x >> rotate (-1*a) b
 
-renderIm :: D.Imagination -> IO [()]
-renderIm (D.Imagination d im) = do
-    renderPrimitive Points $ forM im $ \(D.Ceil x y) -> do
+renderIm :: Imagination -> IO [()]
+renderIm (Imagination d im) = do
+    renderPrimitive Points $ forM im $ \(Ceil x y) -> do
         color3f (Color3 1 1 0)
         vertex3f (Vertex3
             (realToFrac x * realToFrac d)
             (realToFrac y * realToFrac d)
             0)
 
-renderPt :: [D.Point] -> IO [()]
+renderPt :: [P.Point] -> IO [()]
 renderPt p = do
-    renderPrimitive Points $ forM p $ \(D.Point x y) -> do
+    renderPrimitive Points $ forM p $ \(P.Point x y) -> do
         color3f (Color3 1 1 0)
         vertex3f (Vertex3 (realToFrac x) (realToFrac y) 0)
 
