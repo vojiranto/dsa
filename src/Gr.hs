@@ -6,7 +6,7 @@ import Graphics.UI.GLUT hiding ( initialize )
 import Graphics.Rendering.OpenGL.GL.Tensor
 import Data.IORef
 import System.Clock
-import Graph as G
+import SymbolicImage
 import Shift
 import Quar
 import Data

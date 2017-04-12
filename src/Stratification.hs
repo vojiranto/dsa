@@ -6,7 +6,7 @@ import Data.Matrix (Matrix(..))
 
 import Data
 import Point
-import Graph (fromRad, toRad, fromCeil, toCeil, cyclics, myNub)
+import SymbolicImage (fromRad, toRad, fromCeil, toCeil, cyclics, myNub)
 import Jac (jac, e)
 
 -- Один шаг с подразбиением.

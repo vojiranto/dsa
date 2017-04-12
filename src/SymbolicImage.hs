@@ -1,5 +1,5 @@
 {-#Language LambdaCase, BangPatterns#-}
-module Graph (
+module SymbolicImage (
     formImagination,
     stepImagination,
     stepImagination',

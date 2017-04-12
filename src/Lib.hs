@@ -7,23 +7,24 @@ module Lib (
   ) where
 
 import System.Clock
-import Jac
 import Control.Monad ( unless, forM, void, forM_)
 import System.Exit ( exitWith, ExitCode(ExitSuccess) )
 import Graphics.UI.GLUT hiding ( initialize, shift)
 import Graphics.Rendering.OpenGL.GL.Tensor
 import Data.IORef
-import Stratification
 import Data.Char
 import Data.List
+
+import Stratification
+import SymbolicImage
 import GrBuild
 import Point
-import Data
-import Graph
-import Shift
-import Quar
-import Gr
 import Morse
+import Shift
+import Data
+import Quar
+import Jac
+import Gr
 
 someFunc :: IO ()
 someFunc = grInit $ \win -> do

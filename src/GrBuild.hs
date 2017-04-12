@@ -2,7 +2,7 @@ module GrBuild where
 
 import Data
 import Point
-import Graph
+import SymbolicImage
 
 form = 150
 
