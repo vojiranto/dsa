@@ -6,8 +6,7 @@
 module Point where
 
 data Point = Point {
-    x :: !Double,
-    y :: !Double
+    x, y :: !Double
   } deriving (Eq, Show)
 
 class Points a where
