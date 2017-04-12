@@ -22,7 +22,7 @@ import Graph
 import Shift
 import Quar
 import Gr
-
+import Morse
 
 someFunc :: IO ()
 someFunc = grInit $ \win -> do

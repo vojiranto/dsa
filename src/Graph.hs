@@ -36,6 +36,7 @@ stepImagination :: F Point -> F (Imagination, Int)
 stepImagination fp (im, i) =
     (stepImagination' fp im, 4 * size im + i)
 
+
 {-# INLINE stepImagination' #-}
 stepImagination' :: F Point -> F Imagination
 stepImagination' fp (Imagination d c) = Imagination (d/2) $!
