@@ -28,12 +28,11 @@ diff f x = (f (x - d/2) - f (x + d/2))/d
 
 -- якобиан.
 jac :: F Point -> Point -> Matrix Double
-jac f (Point x y) = fromLists [
-    [diff (\x -> f1 $ Point x y) x, diff (\y -> f1 $ Point x y) y],
-    [diff (\x -> f2 $ Point x y) x, diff (\y -> f2 $ Point x y) y]]
+jac f p@(Point x' y') = fromLists [
+    [diff (\a -> f1 p{x = a}) x', diff (\a -> f1 p{y = a}) y'],
+    [diff (\a -> f2 p{x = a}) x', diff (\a -> f2 p{y = a}) y']]
   where
-    f1 = (\(Point x _) -> x).f
-    f2 = (\(Point _ y) -> y).f
+    f1 = x.f ; f2 = y.f
 
 -- единичный вектор.
 e :: Double -> Matrix Double

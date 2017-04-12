@@ -85,5 +85,3 @@ data Vars        = X | Y
 class Size a where
     size :: a -> Int
 
-
-
