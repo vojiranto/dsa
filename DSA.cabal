@@ -49,6 +49,7 @@ executable DSA-exe
                      , GLUT
                      , time
                      , OpenGL
+                     , vector
                      , matrix
                      , freetype2
   default-language:    Haskell2010
@@ -63,6 +64,7 @@ test-suite DSA-test
                      , containers
                      , clock
                      , time
+                     , vector
                      , criterion
                      , do-list
                      , OpenGL

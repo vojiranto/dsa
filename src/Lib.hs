@@ -24,6 +24,7 @@ import Shift
 import Data
 import Quar
 import Jac
+import Graph
 import Gr
 
 someFunc :: IO ()
