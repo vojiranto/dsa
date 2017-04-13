@@ -82,26 +82,33 @@ formS0 gr = IS.toList $ IS.difference
 
 type ApexeI = (Int, Int)
 type Verge  = (Int, Int)
-type VergeA = (Int, Int, Double)
+
+-- Так как для каждой вершины существует только одна исходящая
+-- дуга, то такое предатавление Ns допустимо.
+type VergeA = IntMap (Int, Double)
+type State = ([Int], [ApexeI], VergeA)
 
 bazeContour :: GraphA a -> [Verge]
-bazeContour gr = (\(a, b, _) -> (a, b)) <$> (L.minimumBy cntCmp $
+bazeContour gr = toVerges $ (L.minimumBy cntCmp $
     tr $ until p f gr')
   where
     -- сравниваем два контура.
-    cntCmp :: [VergeA] -> [VergeA] -> Ordering
+    cntCmp :: VergeA -> VergeA -> Ordering
     cntCmp = undefined
 
-    p :: ([ApexeI], [Verge], [VergeA]) -> Bool
+    toVerges :: VergeA -> [Verge]
+    toVerges = undefined
+
+    p :: State -> Bool
     p (a, _, _) = null a
 
-    f :: F ([ApexeI], [Verge], [VergeA])
-    f = undefined
+    f :: F State
+    f (a, s, n) = (L.tail a, undefined, undefined)
 
-    gr' :: ([ApexeI], [Verge], [VergeA])
+    gr' :: State
     gr' = undefined
 
-    tr :: ([ApexeI], [Verge], [VergeA]) -> [[VergeA]]
+    tr :: State -> [VergeA]
     tr  = undefined
 -- VergeI -- Вершины с инде
 
