@@ -79,9 +79,24 @@ formS0 gr = IS.toList $ IS.difference
     (IS.fromList $ elems gr)
     (IS.fromList $ fst <$> formS gr)
 
+{-
+bazeContour :: GraphA a -> [(Int, Int)]
+bazeContour gr = (\(a, b, _) -> (a, b)) <$> (L.minimumBy cntCmp $
+    tr $ until p f gr')
+  where
+    -- сравниваем два контура.
+    cntCmp :: [(Int, Int, Double)] -> [(Int, Int, Double)] -> Ordering
+    cntCmp = undefined
 
+    p :: ([(Int, Int)], ,,) -> Bool
+    p = undefined
+
+    f = undefined
+    gr' = undefined
+    tr  = undefined
+-}
 groupEq :: Ord b => (a -> b) -> [a] -> [[a]]
-groupEq f x = groupBy ((==)`on`f) $ sortBy (compare`on`f) x
+groupEq f = groupBy ((==)`on`f) . sortBy (compare`on`f)
 
 
 instance Ord a => Empty (GraphA a) where
