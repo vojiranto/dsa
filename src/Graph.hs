@@ -9,6 +9,7 @@ import Data.Vector as V     hiding (empty, concatMap, zip)
 import Data.IntMap as IM    hiding (empty)
 import Data.Map    as M     hiding (empty)
 import Data.List   as L
+import Data.Function
 import SymbolicImage
 
 import Data
@@ -36,7 +37,7 @@ formGraphA ls = GraphA verges apexes
     apexList = myNub $ concatMap (\(c1, c2, _) -> [c1, c2]) ls
 
     vergeSet :: [IntMap Double]
-    vergeSet = fmap snd $ sortBy (useFst2 compare) $ set <$> vergeLists
+    vergeSet = fmap snd $ sortBy (compare`on`fst) $ set <$> vergeLists
       where
         set :: [(Int, Int, Double)] -> (Int, IntMap Double)
         set ls = (a, IM.fromList $ (\(_, a, d) -> (a, d)) <$> ls)
@@ -44,8 +45,7 @@ formGraphA ls = GraphA verges apexes
             a = (\(a, _, _) -> a) $ L.head ls
 
     vergeLists :: [[(Int, Int, Double)]]
-    vergeLists = groupBy (useFst (==)) $ sortBy (useFst compare) $
-        transformVerge <$> ls
+    vergeLists = groupEq (\(a, _, _) -> a) $ transformVerge <$> ls
 
     {-#INLINE indexOfApexe#-}
     indexOfApexe x = case x`M.lookup`apexes of
@@ -57,9 +57,8 @@ formGraphA ls = GraphA verges apexes
 
 -- см. стр. 111.
 formN :: GraphA a -> Vector Int
-formN (GraphA v _) = (\(i, d) -> i)
-    <$> L.minimumBy (\(_, d1) (_, d2) -> compare d1 d2)
-    <$> IM.toList <$> v
+formN (GraphA v _) = (\(i, d) -> i) <$>
+    L.minimumBy (compare`on`snd) <$> IM.toList <$> v
 
 
 iToList :: Vector a -> [(Int, a)]
@@ -70,11 +69,16 @@ iToList x = V.toList $ V.imap (\i a -> (i, a)) x
 formS :: Vector Int -> [(Int, Int)]
 formS x = zip (snd . L.head <$> s) (L.length <$> s)
   where
-    s = groupBy (\(_, b1) (_, b2) -> b1 == b2) $
-        sortBy (\(_, b1) (_, b2) -> compare b1 b2) $ iToList x
+    s = groupEq snd $ iToList x
+
+
+groupEq :: Ord b => (a -> b) -> [a] -> [[a]]
+groupEq f x = groupBy ((==)`on`f) $ sortBy (compare`on`f) x
+
 
 instance Ord a => Empty (GraphA a) where
     empty = GraphA empty empty
+
 
 useFst f (a1 ,_ , _) (a2, _, _) = f a1 a2
 useFst2 f (a1, _) (a2, _) = f a1 a2
