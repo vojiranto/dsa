@@ -15,7 +15,7 @@ import Data.Function
 import SymbolicImage
 
 import Data
-import Empty
+import Container
 
 data GraphA a = GraphA {
     verges :: Vector (IntMap Double), -- множества ребер
@@ -110,7 +110,7 @@ groupEq :: Ord b => (a -> b) -> [a] -> [[a]]
 groupEq f = groupBy ((==)`on`f) . sortBy (compare`on`f)
 
 
-instance Ord a => Empty (GraphA a) where
+instance Ord a => Container (GraphA a) where
     type Elem (GraphA a) = Int
 
     empty = GraphA empty empty
