@@ -1,11 +1,12 @@
 {-# Language
-    MultiWayIf #-}
+    MultiWayIf#-}
 module Graph where
 
 import Prelude     as P     hiding (lookup)
 import Data.Vector          hiding (empty, concatMap, zip)
 import Data.IntMap as IM    hiding (empty)
 import Data.Map    as M     hiding (empty)
+import Data.List
 import SymbolicImage
 
 import Data
@@ -20,13 +21,19 @@ formGraphA :: [(Ceil3, Ceil3, Double)] -> GraphA
 formGraphA ls = GraphA verges apexes
   where
     verges = undefined
+
+    apexes :: Map Ceil3 Int
     apexes = M.fromList $ zip apexList [1..]
 
     apexList :: [Ceil3]
     apexList = myNub $ concatMap (\(c1, c2, _) -> [c1, c2]) ls
 
-    vergeList :: [(Int, Int, Double)]
-    vergeList = transformVerge <$> ls
+    vergeLists :: [[(Int, Int, Double)]]
+    vergeLists = groupBy (useFst (==)) $ sortBy (useFst compare) $
+        transformVerge <$> ls
+
+  --useFst :: (a -> b -> c) -> (a, _, _) -> (b, _, _) -> c
+    useFst f (a1 ,_ , _) (a2, _, _) = f a1 a2
 
     {-#INLINE indexOfApexe#-}
     indexOfApexe :: Ceil3 -> Int
