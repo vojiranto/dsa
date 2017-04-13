@@ -1,7 +1,7 @@
 {-# Language
     BangPatterns,
     DeriveAnyClass,
-    FlexibleInstances#-}
+    FlexibleInstances #-}
 
 module Point where
 
