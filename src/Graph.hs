@@ -5,12 +5,12 @@
     GADTs#-}
 module Graph where
 
-import Prelude     as P     hiding (lookup)
-import Data.Vector as V     hiding (empty, concatMap, zip)
-import Data.IntMap as IM    hiding (elems, empty)
-import Data.Map    as M     hiding (elems, empty)
-import Data.IntSet as IS    hiding (elems, empty)
-import Data.List   as L
+import Prelude     as P     hiding (null, lookup)
+import Data.Vector as V     hiding (null, empty, concatMap, zip)
+import Data.IntMap as IM    hiding (null, elems, empty)
+import Data.Map    as M     hiding (null, elems, empty)
+import Data.IntSet as IS    hiding (null, elems, empty)
+import Data.List   as L     hiding (null)
 import Data.Function
 import SymbolicImage
 
@@ -80,25 +80,30 @@ formS0 gr = IS.toList $ IS.difference
     (IS.fromList $ fst <$> formS gr)
 
 
-bazeContour :: GraphA a -> [(Int, Int)]
+type ApexeI = (Int, Int)
+type Verge  = (Int, Int)
+type VergeA = (Int, Int, Double)
+
+bazeContour :: GraphA a -> [Verge]
 bazeContour gr = (\(a, b, _) -> (a, b)) <$> (L.minimumBy cntCmp $
     tr $ until p f gr')
   where
     -- сравниваем два контура.
-    cntCmp :: [(Int, Int, Double)] -> [(Int, Int, Double)] -> Ordering
+    cntCmp :: [VergeA] -> [VergeA] -> Ordering
     cntCmp = undefined
 
-    p :: ([(Int, Int)], [(Int, Int, Double)]) -> Bool
-    p = undefined
+    p :: ([ApexeI], [Verge], [VergeA]) -> Bool
+    p (a, _, _) = null a
 
-    f :: F ([(Int, Int)], [(Int, Int, Double)])
+    f :: F ([ApexeI], [Verge], [VergeA])
     f = undefined
 
-    gr' :: ([(Int, Int)], [(Int, Int, Double)])
+    gr' :: ([ApexeI], [Verge], [VergeA])
     gr' = undefined
 
-    tr :: ([(Int, Int)], [(Int, Int, Double)]) -> [[(Int, Int, Double)]]
+    tr :: ([ApexeI], [Verge], [VergeA]) -> [[VergeA]]
     tr  = undefined
+-- VergeI -- Вершины с инде
 
 
 groupEq :: Ord b => (a -> b) -> [a] -> [[a]]
@@ -110,6 +115,7 @@ instance Ord a => Empty (GraphA a) where
 
     empty = GraphA empty empty
     elems (GraphA _ apexes)= elems apexes
+    null (GraphA _ apexes) = null apexes
 
 useFst f (a1 ,_ , _) (a2, _, _) = f a1 a2
 useFst2 f (a1, _) (a2, _) = f a1 a2
