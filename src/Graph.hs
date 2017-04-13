@@ -12,9 +12,15 @@ import SymbolicImage
 import Data
 import Empty
 
-data GraphA = GraphA
-    (Vector (IntMap Double))        -- множества ребер
-    (Map Ceil3 Int)                 -- множество вершин
+data GraphA = GraphA {
+    verges :: Vector (IntMap Double), -- множества ребер
+    apexes :: Map Ceil3 Int           -- множество вершин
+  }
+
+
+-- Построение графа с обратной ориентацией рёбер.
+formGraphA' :: [(Ceil3, Ceil3, Double)] -> GraphA
+formGraphA' ls = formGraphA $ (\(c1, c2, d) -> (c2, c1, d)) <$> ls
 
 
 -- Построение графа по списку рёбер.
@@ -53,6 +59,7 @@ formGraphA ls = GraphA verges apexes
     {-#INLINE transformVerge#-}
     transformVerge :: (Ceil3, Ceil3, Double) -> (Int, Int, Double)
     transformVerge (a, b, d) = (indexOfApexe a, indexOfApexe b, d)
+
 
 instance Empty GraphA where
     empty = GraphA empty empty
