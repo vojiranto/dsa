@@ -1,5 +1,7 @@
 {-# Language
-    MultiWayIf#-}
+    MultiWayIf,
+    ScopedTypeVariables,
+    GADTs#-}
 module Graph where
 
 import Prelude     as P     hiding (lookup)
@@ -12,27 +14,25 @@ import SymbolicImage
 import Data
 import Empty
 
-data GraphA = GraphA {
+data GraphA a = GraphA {
     verges :: Vector (IntMap Double), -- множества ребер
-    apexes :: Map Ceil3 Int           -- множество вершин
+    apexes :: Map a Int               -- множество вершин
   }
 
 
 -- Построение графа с обратной ориентацией рёбер.
-formGraphA' :: [(Ceil3, Ceil3, Double)] -> GraphA
+formGraphA' :: Ord a => [(a, a, Double)] -> GraphA a
 formGraphA' ls = formGraphA $ (\(c1, c2, d) -> (c2, c1, d)) <$> ls
 
 
 -- Построение графа по списку рёбер.
-formGraphA :: [(Ceil3, Ceil3, Double)] -> GraphA
+formGraphA :: Ord a => [(a, a, Double)] -> GraphA a
 formGraphA ls = GraphA verges apexes
   where
     verges = V.fromList $ vergeSet
 
-    apexes :: Map Ceil3 Int
     apexes = M.fromList $ zip apexList [0..]
 
-    apexList :: [Ceil3]
     apexList = myNub $ concatMap (\(c1, c2, _) -> [c1, c2]) ls
 
     vergeSet :: [IntMap Double]
@@ -47,19 +47,22 @@ formGraphA ls = GraphA verges apexes
     vergeLists = groupBy (useFst (==)) $ sortBy (useFst compare) $
         transformVerge <$> ls
 
-  --useFst :: (a -> b -> c) -> (a, _, _) -> (b, _, _) -> c
-    useFst f (a1 ,_ , _) (a2, _, _) = f a1 a2
-    useFst2 f (a1, _) (a2, _) = f a1 a2
-
     {-#INLINE indexOfApexe#-}
-    indexOfApexe :: Ceil3 -> Int
     indexOfApexe x = case x`M.lookup`apexes of
         Just i -> i
 
     {-#INLINE transformVerge#-}
-    transformVerge :: (Ceil3, Ceil3, Double) -> (Int, Int, Double)
     transformVerge (a, b, d) = (indexOfApexe a, indexOfApexe b, d)
 
+-- см. стр. 111.
+formN :: GraphA a -> Vector Int
+formN (GraphA v _) = (\(i, d) -> i)
+    <$> L.minimumBy (\(_, d1) (_, d2) -> compare d1 d2)
+    <$> IM.toList <$> v
 
-instance Empty GraphA where
+
+instance Ord a => Empty (GraphA a) where
     empty = GraphA empty empty
+
+useFst f (a1 ,_ , _) (a2, _, _) = f a1 a2
+useFst2 f (a1, _) (a2, _) = f a1 a2
