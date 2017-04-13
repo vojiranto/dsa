@@ -3,10 +3,10 @@
 module Graph where
 
 import Prelude     as P     hiding (lookup)
-import Data.Vector          hiding (empty, concatMap, zip)
+import Data.Vector as V     hiding (empty, concatMap, zip)
 import Data.IntMap as IM    hiding (empty)
 import Data.Map    as M     hiding (empty)
-import Data.List
+import Data.List   as L
 import SymbolicImage
 
 import Data
@@ -27,6 +27,14 @@ formGraphA ls = GraphA verges apexes
 
     apexList :: [Ceil3]
     apexList = myNub $ concatMap (\(c1, c2, _) -> [c1, c2]) ls
+
+    vergeSet :: Vector (Int, IntMap Double)
+    vergeSet = V.fromList $ set <$> vergeLists
+      where
+        set :: [(Int, Int, Double)] -> (Int, IntMap Double)
+        set ls = (a, IM.fromList $ (\(_, a, d) -> (a, d)) <$> ls)
+          where
+            a = (\(a, _, _) -> a) $ L.head ls
 
     vergeLists :: [[(Int, Int, Double)]]
     vergeLists = groupBy (useFst (==)) $ sortBy (useFst compare) $
