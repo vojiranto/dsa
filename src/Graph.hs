@@ -1,13 +1,15 @@
 {-# Language
     MultiWayIf,
     ScopedTypeVariables,
+    TypeFamilies,
     GADTs#-}
 module Graph where
 
 import Prelude     as P     hiding (lookup)
 import Data.Vector as V     hiding (empty, concatMap, zip)
-import Data.IntMap as IM    hiding (empty)
-import Data.Map    as M     hiding (empty)
+import Data.IntMap as IM    hiding (elems, empty)
+import Data.Map    as M     hiding (elems, empty)
+import Data.IntSet as IS    hiding (elems, empty)
 import Data.List   as L
 import Data.Function
 import SymbolicImage
@@ -66,10 +68,16 @@ iToList x = V.toList $ V.imap (\i a -> (i, a)) x
 
 
 -- Для всех вершин, чей индекс входящих не равен нулю.
-formS :: Vector Int -> [(Int, Int)]
-formS x = zip (snd . L.head <$> s) (L.length <$> s)
+formS :: GraphA a -> [(Int, Int)]
+formS gr = zip (snd . L.head <$> s) (L.length <$> s)
   where
-    s = groupEq snd $ iToList x
+    s = groupEq snd . iToList $ formN gr
+
+
+formS0 :: Ord a => GraphA a -> [Int]
+formS0 gr = IS.toList $ IS.difference
+    (IS.fromList $ elems gr)
+    (IS.fromList $ fst <$> formS gr)
 
 
 groupEq :: Ord b => (a -> b) -> [a] -> [[a]]
@@ -77,8 +85,10 @@ groupEq f x = groupBy ((==)`on`f) $ sortBy (compare`on`f) x
 
 
 instance Ord a => Empty (GraphA a) where
-    empty = GraphA empty empty
+    type Elem (GraphA a) = Int
 
+    empty = GraphA empty empty
+    elems (GraphA _ apexes)= elems apexes
 
 useFst f (a1 ,_ , _) (a2, _, _) = f a1 a2
 useFst2 f (a1, _) (a2, _) = f a1 a2
