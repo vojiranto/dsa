@@ -29,13 +29,16 @@ formGraphA' ls = formGraphA $ (\(c1, c2, d) -> (c2, c1, d)) <$> ls
 
 
 -- Построение графа по списку рёбер.
-formGraphA :: Ord a => [(a, a, Double)] -> GraphA a
+formGraphA :: forall a. Ord a => [(a, a, Double)] -> GraphA a
 formGraphA ls = GraphA verges apexes
   where
+    verges :: Vector (IntMap Double)
     verges = V.fromList $ vergeSet
 
+    apexes :: Map a Int
     apexes = M.fromList $ zip apexList [0..]
 
+    apexList :: [a]
     apexList = myNub $ concatMap (\(c1, c2, _) -> [c1, c2]) ls
 
     vergeSet :: [IntMap Double]
@@ -44,16 +47,20 @@ formGraphA ls = GraphA verges apexes
         set :: [(Int, Int, Double)] -> (Int, IntMap Double)
         set ls = (a, IM.fromList $ (\(_, a, d) -> (a, d)) <$> ls)
           where
+            {-#INLINE a#-}
+            a :: Int
             a = (\(a, _, _) -> a) $ L.head ls
 
     vergeLists :: [[(Int, Int, Double)]]
     vergeLists = groupEq (\(a, _, _) -> a) $ transformVerge <$> ls
 
     {-#INLINE indexOfApexe#-}
+    indexOfApexe :: a -> Int
     indexOfApexe x = case x`M.lookup`apexes of
         Just i -> i
 
     {-#INLINE transformVerge#-}
+    transformVerge :: (a, a, Double) -> (Int, Int, Double)
     transformVerge (a, b, d) = (indexOfApexe a, indexOfApexe b, d)
 
 
@@ -71,6 +78,7 @@ iToList x = V.toList $ V.imap (\i a -> (i, a)) x
 formS :: GraphA a -> [(Int, Int)]
 formS gr = zip (snd . L.head <$> s) (L.length <$> s)
   where
+    s :: [[(Int, Int)]]
     s = groupEq snd . iToList $ formN gr
 
 
