@@ -54,12 +54,24 @@ formGraphA ls = GraphA verges apexes
     {-#INLINE transformVerge#-}
     transformVerge (a, b, d) = (indexOfApexe a, indexOfApexe b, d)
 
+
 -- см. стр. 111.
 formN :: GraphA a -> Vector Int
 formN (GraphA v _) = (\(i, d) -> i)
     <$> L.minimumBy (\(_, d1) (_, d2) -> compare d1 d2)
     <$> IM.toList <$> v
 
+
+iToList :: Vector a -> [(Int, a)]
+iToList x = V.toList $ V.imap (\i a -> (i, a)) x
+
+
+-- Для всех вершин, чей индекс входящих не равен нулю.
+formS :: Vector Int -> [(Int, Int)]
+formS x = zip (snd . L.head <$> s) (L.length <$> s)
+  where
+    s = groupBy (\(_, b1) (_, b2) -> b1 == b2) $
+        sortBy (\(_, b1) (_, b2) -> compare b1 b2) $ iToList x
 
 instance Ord a => Empty (GraphA a) where
     empty = GraphA empty empty
