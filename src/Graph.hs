@@ -17,19 +17,20 @@ data GraphA = GraphA
     (Map Ceil3 Int)                 -- множество вершин
 
 
+-- Построение графа по списку рёбер.
 formGraphA :: [(Ceil3, Ceil3, Double)] -> GraphA
 formGraphA ls = GraphA verges apexes
   where
-    verges = undefined
+    verges = V.fromList $ vergeSet
 
     apexes :: Map Ceil3 Int
-    apexes = M.fromList $ zip apexList [1..]
+    apexes = M.fromList $ zip apexList [0..]
 
     apexList :: [Ceil3]
     apexList = myNub $ concatMap (\(c1, c2, _) -> [c1, c2]) ls
 
-    vergeSet :: Vector (Int, IntMap Double)
-    vergeSet = V.fromList $ set <$> vergeLists
+    vergeSet :: [IntMap Double]
+    vergeSet = fmap snd $ sortBy (useFst2 compare) $ set <$> vergeLists
       where
         set :: [(Int, Int, Double)] -> (Int, IntMap Double)
         set ls = (a, IM.fromList $ (\(_, a, d) -> (a, d)) <$> ls)
@@ -42,6 +43,7 @@ formGraphA ls = GraphA verges apexes
 
   --useFst :: (a -> b -> c) -> (a, _, _) -> (b, _, _) -> c
     useFst f (a1 ,_ , _) (a2, _, _) = f a1 a2
+    useFst2 f (a1, _) (a2, _) = f a1 a2
 
     {-#INLINE indexOfApexe#-}
     indexOfApexe :: Ceil3 -> Int
