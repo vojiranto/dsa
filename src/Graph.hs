@@ -2,7 +2,7 @@
     MultiWayIf #-}
 module Graph where
 
-import Prelude              hiding (lookup)
+import Prelude     as P     hiding (lookup)
 import Data.Vector          hiding (empty, concatMap, zip)
 import Data.IntMap as IM    hiding (empty)
 import Data.Map    as M     hiding (empty)
@@ -25,6 +25,17 @@ formGraphA ls = GraphA verges apexes
     apexList :: [Ceil3]
     apexList = myNub $ concatMap (\(c1, c2, _) -> [c1, c2]) ls
 
+    vergeList :: [(Int, Int, Double)]
+    vergeList = transformVerge <$> ls
+
+    {-#INLINE indexOfApexe#-}
+    indexOfApexe :: Ceil3 -> Int
+    indexOfApexe x = case x`M.lookup`apexes of
+        Just i -> i
+
+    {-#INLINE transformVerge#-}
+    transformVerge :: (Ceil3, Ceil3, Double) -> (Int, Int, Double)
+    transformVerge (a, b, d) = (indexOfApexe a, indexOfApexe b, d)
 
 instance Empty GraphA where
     empty = GraphA empty empty
