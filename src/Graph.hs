@@ -121,9 +121,11 @@ bazeContour gr = toVerges $ (L.minimumBy cntCmp $
     p :: State -> Bool
     p (a, _, _) = null a
 
+    -- TODO
     f :: F State
     f (a, s, n) = (L.tail a, undefined, undefined)
 
+    -- TODO
     gr' :: State
     gr' = (formS0 gr, undefined, undefined)
 
@@ -137,6 +139,7 @@ bazeContour gr = toVerges $ (L.minimumBy cntCmp $
                 (IM.difference v extract)
             | otherwise     -> empty
           where
+            -- TODO
             extract :: VergeA
             extract = undefined
 -- VergeI -- Вершины с инде
