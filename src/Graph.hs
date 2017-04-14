@@ -135,13 +135,23 @@ bazeContour gr = toVerges $ (L.minimumBy cntCmp $
       where
         separation :: VergeA -> [VergeA]
         separation v = if
-            | not.null $ v  -> extract : separation
-                (IM.difference v extract)
+            | not.null $ v  -> ext:separation (IM.difference v ext)
             | otherwise     -> empty
           where
-            -- TODO
-            extract :: VergeA
-            extract = undefined
+            ext :: VergeA
+            ext = extract v
+
+            extract :: VergeA -> VergeA
+            extract v = IM.fromList $ st : go v (fst.snd $ st)
+              where
+                st :: (Int, (Int, Double))
+                st = IM.findMin v
+
+                go :: VergeA -> Int -> [(Int, (Int, Double))]
+                go v k = case k`IM.lookup`v of
+                    Just (i, d) -> (k, (i, d)) : go v i
+                    Nothing     -> empty
+
 -- VergeI -- Вершины с инде
 
 
