@@ -102,7 +102,10 @@ bazeContour gr = toVerges $ (L.minimumBy cntCmp $
   where
     -- сравниваем два контура.
     cntCmp :: VergeA -> VergeA -> Ordering
-    cntCmp = undefined
+    cntCmp = compare`on`toD
+      where
+        toD :: VergeA -> Double
+        toD = undefined
 
     toVerges :: VergeA -> [Verge]
     toVerges = undefined
