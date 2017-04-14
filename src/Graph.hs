@@ -65,30 +65,34 @@ formGraphA ls = GraphA verges apexes
 
 
 -- см. стр. 111.
-formN :: GraphA a -> Vector Int
-formN (GraphA v _) = (\(i, d) -> i) <$>
-    L.minimumBy (compare`on`snd) <$> IM.toList <$> v
+formN :: GraphA a -> VergeA
+formN = IM.fromList.iToList.formN'
+  where
+    formN' :: GraphA a -> Vector (Int, Double)
+    formN' (GraphA v _) = L.minimumBy (compare`on`snd) <$>
+        IM.toList <$> v
 
 
-iToList :: Vector a -> [(Int, a)]
-iToList x = V.toList $ V.imap (\i a -> (i, a)) x
+    iToList :: Vector a -> [(Int, a)]
+    iToList x = V.toList $ V.imap (\i a -> (i, a)) x
 
 
 -- Для всех вершин, чей индекс входящих не равен нулю.
-formS :: GraphA a -> [(Int, Int)]
-formS gr = zip (snd . L.head <$> s) (L.length <$> s)
+formS :: GraphA a -> IntMap Int
+formS gr = IM.fromList $ zip (snd . L.head <$> s) (L.length <$> s)
   where
     s :: [[(Int, Int)]]
-    s = groupEq snd . iToList $ formN gr
+    s = groupEq snd $ (\(a, (b, _)) -> (a, b)) <$>
+        (IM.toList $ formN gr)
 
 
 formS0 :: Ord a => GraphA a -> [Int]
 formS0 gr = IS.toList $ IS.difference
     (IS.fromList $ elems gr)
-    (IS.fromList $ fst <$> formS gr)
+    (IS.fromList $ fst <$> (IM.toList $ formS gr))
 
 
-type ApexeI = (Int, Int)
+type ApexesI = IntMap Int
 type Verge  = (Int, Int)
 
 -- Так как для каждой вершины существует только одна исходящая
@@ -96,7 +100,7 @@ type Verge  = (Int, Int)
 type VergeA = IntMap (Int, Double)
 type State = (
     [Int],      -- список вершин, чья степень равна нулю.
-    [ApexeI],   -- список вершин с степенянми не равными нулю.
+    ApexesI,   -- список вершин с степенянми не равными нулю.
     VergeA      -- множество ребер.
   )
 
@@ -121,13 +125,33 @@ bazeContour gr = toVerges $ (L.minimumBy cntCmp $
     p :: State -> Bool
     p (a, _, _) = null a
 
-    -- TODO
     f :: F State
-    f (a, s, n) = (undefined, undefined, undefined)
+    f (a, s, n) = (a', s', n')
+      where
+        a' :: [Int]
+        a' = if
+            | solv      -> j:L.tail a
+            | otherwise ->   L.tail a
 
-    -- TODO
+        s' :: ApexesI
+        s' = if
+            | solv      -> IM.delete             i s
+            | otherwise -> IM.adjust (\x -> x-1) i s
+
+        n' :: VergeA
+        n' = IM.delete i n
+
+        j :: Int
+        j = case i`IM.lookup`n of Just (j, _) -> j
+
+        solv :: Bool
+        solv = case j`IM.lookup`s of Just i -> i - 1 == 0
+
+        i :: Int
+        i = L.head a
+
     gr' :: State
-    gr' = (formS0 gr, iToList $ formN gr, undefined)
+    gr' = (formS0 gr, formS gr, formN gr)
 
     -- разделение на контуры.
     tr :: State -> [VergeA]
