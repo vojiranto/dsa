@@ -123,11 +123,11 @@ bazeContour gr = toVerges $ (L.minimumBy cntCmp $
 
     -- TODO
     f :: F State
-    f (a, s, n) = (L.tail a, undefined, undefined)
+    f (a, s, n) = (undefined, undefined, undefined)
 
     -- TODO
     gr' :: State
-    gr' = (formS0 gr, undefined, undefined)
+    gr' = (formS0 gr, iToList $ formN gr, undefined)
 
     -- разделение на контуры.
     tr :: State -> [VergeA]
