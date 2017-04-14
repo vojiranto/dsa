@@ -94,9 +94,14 @@ type Verge  = (Int, Int)
 -- Так как для каждой вершины существует только одна исходящая
 -- дуга, то такое предатавление Ns допустимо.
 type VergeA = IntMap (Int, Double)
-type State = ([Int], [ApexeI], VergeA)
+type State = (
+    [Int],      -- список вершин, чья степень равна нулю.
+    [ApexeI],   -- список вершин с степенянми не равными нулю.
+    VergeA      -- множество ребер.
+  )
 
-bazeContour :: GraphA a -> [Verge]
+
+bazeContour :: Ord a => GraphA a -> [Verge]
 bazeContour gr = toVerges $ (L.minimumBy cntCmp $
     tr $ until p f gr')
   where
@@ -120,10 +125,15 @@ bazeContour gr = toVerges $ (L.minimumBy cntCmp $
     f (a, s, n) = (L.tail a, undefined, undefined)
 
     gr' :: State
-    gr' = undefined
+    gr' = (formS0 gr, undefined, undefined)
 
+    -- разделение на контуры.
     tr :: State -> [VergeA]
-    tr  = undefined
+    tr (_, _, v) = separation v
+      where
+        separation :: VergeA -> [VergeA]
+        separation = undefined
+
 -- VergeI -- Вершины с инде
 
 
