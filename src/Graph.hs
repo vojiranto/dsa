@@ -105,7 +105,10 @@ bazeContour gr = toVerges $ (L.minimumBy cntCmp $
     cntCmp = compare`on`toD
       where
         toD :: VergeA -> Double
-        toD = undefined
+        toD v = L.sum elemsOfV / toEnum (L.length elemsOfV)
+          where
+            elemsOfV :: [Double]
+            elemsOfV = snd <$> elems v
 
     toVerges :: VergeA -> [Verge]
     toVerges = undefined
