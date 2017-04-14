@@ -132,8 +132,13 @@ bazeContour gr = toVerges $ (L.minimumBy cntCmp $
     tr (_, _, v) = separation v
       where
         separation :: VergeA -> [VergeA]
-        separation = undefined
-
+        separation v = if
+            | not.null $ v  -> extract : separation
+                (IM.difference v extract)
+            | otherwise     -> empty
+          where
+            extract :: VergeA
+            extract = undefined
 -- VergeI -- Вершины с инде
 
 
