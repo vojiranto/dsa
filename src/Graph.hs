@@ -63,6 +63,9 @@ formGraphA ls = GraphA verges apexes
     transformVerge :: (a, a, Double) -> (Int, Int, Double)
     transformVerge (a, b, d) = (indexOfApexe a, indexOfApexe b, d)
 
+-- TODO
+-- Переработать уменьшив число трансформаций между форматами!!!
+
 
 -- см. стр. 111.
 formN :: GraphA a -> VergeA
