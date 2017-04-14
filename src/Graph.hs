@@ -111,7 +111,7 @@ bazeContour gr = toVerges $ (L.minimumBy cntCmp $
             elemsOfV = snd <$> elems v
 
     toVerges :: VergeA -> [Verge]
-    toVerges = undefined
+    toVerges x = (\(a,(b, c)) -> (a, b)) <$> IM.toList x
 
     p :: State -> Bool
     p (a, _, _) = null a
