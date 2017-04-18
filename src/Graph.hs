@@ -17,10 +17,11 @@ import SymbolicImage
 import Data
 import Container
 
-data GraphA a = GraphA {
-    verges :: Vector (IntMap Double), -- множества ребер
-    apexes :: Map a Int               -- множество вершин
-  }
+data GraphA a where
+    GraphA :: Ord a => {
+        verges :: Vector (IntMap Double), -- множества ребер
+        apexes :: Map a Int               -- множество вершин
+    } -> GraphA a
 
 
 -- Построение графа с обратной ориентацией рёбер.
@@ -97,6 +98,7 @@ formS0 gr = IS.toList $ IS.difference
 
 type ApexesI = IntMap Int
 type Verge  = (Int, Int)
+
 
 -- Так как для каждой вершины существует только одна исходящая
 -- дуга, то такое предатавление Ns допустимо.
