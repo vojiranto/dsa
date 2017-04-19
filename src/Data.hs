@@ -1,4 +1,8 @@
-{-#LAnguage BangPatterns, DeriveAnyClass, FlexibleInstances#-}
+{-# LAnguage
+    BangPatterns,
+    DeriveAnyClass,
+    FlexibleInstances,
+    GADTs#-}
 module Data where
 
 import Point
@@ -23,12 +27,10 @@ data Func =
 
 data Space = Space Point Point
 
-data LabNumb =
-     Lab1 {
-    imag :: Imagination
-  }| Lab2 {
-    ptch :: [Point]
-  }| Und
+data LabNumb where
+    Lab1 :: {imag :: Imagination} -> LabNumb
+    Lab2 :: {ptch :: [Point]}     -> LabNumb
+    Und  ::                          LabNumb
   deriving Eq
 
 data St = St {
@@ -52,7 +54,8 @@ data Ceil = Ceil !Int !Int
 data Ceil3 = Ceil3 !Ceil !Int
   deriving (Eq, Ord, Show)
 
-data Imagination = Imagination !Diameter ![Ceil] deriving Eq
+data Imagination = Imagination !Diameter ![Ceil]
+  deriving Eq
 
 -- Расслоение
 data Stratification = Stratification {
@@ -74,10 +77,10 @@ data Line           = Line Point Point
 data Patch          = Patch [Point]
   deriving Eq
 
-data Sigs        = Plus | Minus | Mull | Div
+data Sigs           = Plus | Minus | Mull | Div
   deriving (Eq, Show)
 
-data Vars        = X | Y
+data Vars           = X | Y
   deriving (Eq, Show)
 
 
