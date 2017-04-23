@@ -12,9 +12,7 @@ renderScene d ev = do
     dw     <- widgetGetDrawWindow d
     (w, h) <- widgetGetSize d
     gc     <- gcNew dw
-    let fg = Color  (round (65535 * 0))
-                    (round (65535 * 0))
-                    (round (65535 * 0))
+    let fg = color 0 0 0
     gcSetValues gc $ newGCValues { foreground = fg }
     drawPoint dw gc (220, 220)
     drawPoint dw gc (22, 22)
@@ -28,9 +26,7 @@ main = do
     drawing <- drawingAreaNew
     windowSetTitle window "Cells"
     containerAdd window drawing
-    let bg = Color  (round (65535 * 205))
-                    (round (65535 * 205))
-                    (round (65535 * 255))
+    let bg = color 1 1 1
     widgetModifyBg drawing StateNormal bg
     onExpose drawing (renderScene drawing)
 
@@ -39,6 +35,12 @@ main = do
     windowSetPosition window WinPosCenter
     widgetShowAll window
     mainGUI
+
+color r g b = Color
+    (round $ 65535 * r)
+    (round $ 65535 * g)
+    (round $ 65535 * b)
+
 {-
 import Graphics.UI.Gtk
 --import System.Glib.UTFString
