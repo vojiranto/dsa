@@ -11,7 +11,7 @@ data Lex
     = Double !Double !Double
     | Int !Double
     | Lex !String
-    | Bracket [Lex]
+    | Bracket ![Lex]
     | Err !String
     | Sig !Sigs !Lex !Lex
     | Signum !Lex

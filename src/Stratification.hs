@@ -19,8 +19,8 @@ stepStratification fp (Stratification d1 d2 ls) = Stratification
 
 
 toStratification :: Imagination -> Stratification
-toStratification (Imagination d c) = Stratification
-    d 2 (concatMap (\c -> [Ceil3 c 1, Ceil3 c 2]) c)
+toStratification (Imagination d c) = Stratification d pi
+    (flip Ceil3 1 <$> c)
 
 
 -- подразбиение на более мелкие уровни
