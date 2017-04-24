@@ -2,7 +2,7 @@ import Graphics.UI.Gtk
 import Graphics.UI.Gtk.Gdk.GC
 import Graphics.UI.Gtk hiding (Color, Point, Object)
 import Control.Monad
-import Data.IORef
+import Data.IORef as R
 import Point
 
 defaultFgColor :: Color
@@ -11,29 +11,39 @@ defaultFgColor = Color 65535 65535 65535
 defaultBgColor :: Color
 defaultBgColor = Color 0 0 0
 
-renderScene d p ev = do
+-- Необходимо хранить.
+    -- Края: xMin, xMax, yMin, yMax
+    -- Образ
+
+renderScene d lims p ev = do
     dw     <- widgetGetDrawWindow d
+    (xMax, yMax) <- readIORef lims
     (w, h) <- widgetGetSize d
     gc     <- gcNew dw
     let fg = color 0 0 0
     gcSetValues gc $ newGCValues { foreground = fg }
-    let tr (x, y) = (
-            round (x *        toEnum w) `div` 6 + w`div`2,
-            round (y * (-1) * toEnum h) `div` 6 + h`div`2)
+    let wM = round (xMax * 2)
+        hM = round (yMax * 2)
+        tr (x, y) = (
+            round (x *        toEnum w) `div` wM + w`div`2,
+            round (y * (-1) * toEnum h) `div` hM + h`div`2)
         drawLine' x y = drawLine dw gc (tr x) (tr y)
 
     -- Оси OX и OY
-    drawLine' (0, -3) (0, 3)
-    drawLine' (-3, 0) (3, 0)
+    drawLine' (0, -yMax) (0, yMax)
+    drawLine' (-xMax, 0) (xMax, 0)
 
     -- Насечки (мелкие)
-    forM_ [-2.9, -2.8..3] $ \i -> do
+    forM_ [-xMax, -xMax+0.1..xMax] $ \i -> do
         drawLine' (i, 0.01) (i, -0.01)
+    forM_ [-yMax, -yMax+0.1..yMax] $ \i -> do
         drawLine' (0.01, i) (-0.01, i)
 
     -- насечки крупные
-    forM_ [-3..3] $ \i -> do
+    forM_ [-xMax..xMax] $ \i -> do
         drawLine' (i, 0.1) (i, -0.1)
+
+    forM_ [-yMax..yMax] $ \i -> do
         drawLine' (0.1, i) (-0.1, i)
 
     drawPoints dw gc $ (\(Point x y) -> tr (x, y)) <$> p
@@ -45,10 +55,10 @@ main = do
     window  <- windowNew
     hBox    <- hBoxNew False 4
     vBox    <- vBoxNew False 4
-    hl@[h1, h2, h3,hx1,hx2,hy1, hy2, h4, h5] <- forM [1..9] $
+    hl@[h1, h2, h3,hx,hy, h4, h5] <- forM [1..7] $
         const (hBoxNew False 4)
     [   ar1, ar2, ar3,
-        arXmin, arXmax, arYmin, arYmax] <- forM [1..7] (const entryNew)
+        arX, arY] <- forM [1..5] (const entryNew)
     drawing <- drawingAreaNew
 
     set window [
@@ -80,10 +90,9 @@ main = do
     extr h1 ar1 "x' = " "1 + y - 1.4 * pot(x, 2)"
     extr h2 ar2 "y' = " "0.3*x"
 
-    extr hx1 arXmin "x min = " "-1.5"
-    extr hx2 arXmax "x max = "  "1.5"
-    extr hy1 arYmin "y min = " "-1"
-    extr hy2 arYmax "y max = "  "1"
+
+    extr hx arX "x max = "  "1.5"
+    extr hy arY "y max = "  "1"
     extr h3 ar3 "Число итераций = " "5"
 
     [b1, b2] <- forM ["Образ", "Дополнительная итерация"]
@@ -103,7 +112,9 @@ main = do
 
     let bg = color 1 1 1
     widgetModifyBg drawing StateNormal bg
-    onExpose drawing (renderScene drawing [])
+
+    r <- newIORef (1.5, 1)
+    onExpose drawing (renderScene drawing r [])
 
     onDestroy window mainQuit
     windowSetPosition window WinPosCenter
