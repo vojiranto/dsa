@@ -1,8 +1,11 @@
-import Graphics.UI.Gtk
+import Graphics.UI.Gtk hiding (Point)
 import Graphics.UI.Gtk.Gdk.GC
 import Graphics.UI.Gtk hiding (Color, Point, Object)
+import Shift
 import Control.Monad
 import Data.IORef as R
+import SymbolicImage
+import Data
 import Point
 
 defaultFgColor :: Color
@@ -12,12 +15,14 @@ defaultBgColor :: Color
 defaultBgColor = Color 0 0 0
 
 -- Необходимо хранить.
-    -- Края: xMin, xMax, yMin, yMax
+    -- Края: xMin, xMax, yMin, yMax -- Ok.
     -- Образ
 
 renderScene d lims p ev = do
-    dw     <- widgetGetDrawWindow d
+    dw           <- widgetGetDrawWindow d
     (xMax, yMax) <- readIORef lims
+    Imagination d' p <- readIORef p
+
     (w, h) <- widgetGetSize d
     gc     <- gcNew dw
     let fg = color 0 0 0
@@ -46,7 +51,7 @@ renderScene d lims p ev = do
     forM_ [-yMax..yMax] $ \i -> do
         drawLine' (0.1, i) (-0.1, i)
 
-    drawPoints dw gc $ (\(Point x y) -> tr (x, y)) <$> p
+    drawPoints dw gc $ (\(Point x y) -> tr (x, y)).fromCeil d' <$> p
     return True
 
 main :: IO ()
@@ -95,13 +100,13 @@ main = do
     extr hy arY "y max = "  "1"
     extr h3 ar3 "Число итераций = " "5"
 
-    [b1, b2] <- forM ["Образ", "Дополнительная итерация"]
-        buttonNewWithLabel
+    let buttons h txt = forM txt $ \txt -> do
+             b <- buttonNewWithLabel txt
+             setСontainers h [b]
+             return b
 
-    setСontainers h4 [b1, b2]
-
-    b3 <- buttonNewWithLabel "Спектр морса"
-    setСontainers h5 [b3]
+    [b1, b2] <- buttons h4 ["Образ", "Дополнительная итерация"]
+    [b3] <- buttons h5 ["Спектр морса"]
 
     -- Настраиваем упаковку аплетов
     boxSetChildPacking hBox vBox PackNatural 4 PackStart
@@ -114,7 +119,27 @@ main = do
     widgetModifyBg drawing StateNormal bg
 
     r <- newIORef (1.5, 1)
-    onExpose drawing (renderScene drawing r [])
+    i <- newIORef $ Imagination 1 []
+    onExpose drawing (renderScene drawing r i)
+
+    -- Нажимаем на кнопку "Образ"
+    onClicked b1 $ do
+        [x',y',xMax, yMax, nInt] <- mapM entryGetText
+            [ar1, ar2, arX, arY, ar3]
+
+        -- TODO Нужна обработка ошибок чтения.
+        writeIORef r (read xMax, read yMax)
+        widgetDestroy drawing
+
+        let f p        = Point (shift x' p) (shift y' p)
+            sp         = Space (point' xMax yMax) (point xMax yMax)
+            (image, i') = formImagination f sp !! (read nInt)
+
+        writeIORef i image
+
+        setСontainers hBox [drawing]
+        void $ onExpose drawing (renderScene drawing r i)
+        widgetShowAll window
 
     onDestroy window mainQuit
     windowSetPosition window WinPosCenter
@@ -125,6 +150,14 @@ color r g b = Color
     (round $ 65535 * r)
     (round $ 65535 * g)
     (round $ 65535 * b)
+
+point :: String -> String -> Point
+point x y = Point (read x) (read y)
+
+point' :: String -> String -> Point
+point' x y = Point (-1*(read x)) (-1*(read y))
+
+
 
 {-
 import Graphics.UI.Gtk
