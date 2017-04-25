@@ -1,8 +1,11 @@
+{-#Language ScopedTypeVariables, BangPatterns, MultiWayIf#-}
 import Graphics.UI.Gtk hiding (Point)
 import Graphics.UI.Gtk.Gdk.GC
 import Graphics.UI.Gtk hiding (Color, Point, Object)
 import Shift
 import Control.Monad
+import Data.Maybe
+import Control.Exception
 import Data.IORef as R
 import SymbolicImage
 import Data
@@ -50,8 +53,8 @@ renderScene d lims p ev = do
 
     forM_ [-yMax..yMax] $ \i -> do
         drawLine' (0.1, i) (-0.1, i)
-
-    drawPoints dw gc $ (\(Point x y) -> tr (x, y)).fromCeil d' <$> p
+    let pTr (Point x y) = tr (x, y)
+    drawPoints dw gc $ pTr.fromCeil d' <$> p
     return True
 
 main :: IO ()
@@ -60,7 +63,7 @@ main = do
     window  <- windowNew
     hBox    <- hBoxNew False 4
     vBox    <- vBoxNew False 4
-    hl@[h1, h2, h3,hx,hy, h4, h5] <- forM [1..7] $
+    hl@[h1, h2, h3,hx,hy, h4, h5,her] <- forM [1..8] $
         const (hBoxNew False 4)
     [   ar1, ar2, ar3,
         arX, arY] <- forM [1..5] (const entryNew)
@@ -128,15 +131,45 @@ main = do
             [ar1, ar2, arX, arY, ar3]
 
         -- TODO Нужна обработка ошибок чтения.
-        writeIORef r (read xMax, read yMax)
+        xMax <- catch
+            (pure $! Just $! (read xMax :: Double))
+            (\(_ :: SomeException) ->
+                pure Nothing :: IO (Maybe Double))
+        yMax <- catch
+            (pure $! Just $! (read yMax :: Double))
+            (\(_ :: SomeException) ->
+                pure Nothing :: IO (Maybe Double))
+        if isJust xMax && isJust yMax then do
+            -- разворачиваем
+            Just xMax <- pure xMax
+            Just yMax <- pure yMax
+
+            writeIORef r (xMax, yMax)
+            widgetDestroy drawing
+
+            let f p        = Point (shift x' p) (shift y' p)
+                sp         = Space
+                    (Point (-1 * xMax) (-1 * yMax))
+                    (Point       xMax        yMax )
+                (image, i') = formImagination f sp !! (read nInt)
+
+            writeIORef i image
+
+            setСontainers hBox [drawing]
+            void $ onExpose drawing (renderScene drawing r i)
+        else if
+            | not.isJust $ xMax -> pure ()
+            | not.isJust $ yMax -> pure ()
+        widgetShowAll window
+
+    onClicked b2 $ do
+        [x',y',xMax, yMax, nInt] <- mapM entryGetText
+            [ar1, ar2, arX, arY, ar3]
+        im <- readIORef i
+        let (im', i') = stepImagination f (im, 0)
+            f p       = Point (shift x' p) (shift y' p)
+        writeIORef i im'
         widgetDestroy drawing
-
-        let f p        = Point (shift x' p) (shift y' p)
-            sp         = Space (point' xMax yMax) (point xMax yMax)
-            (image, i') = formImagination f sp !! (read nInt)
-
-        writeIORef i image
-
         setСontainers hBox [drawing]
         void $ onExpose drawing (renderScene drawing r i)
         widgetShowAll window
@@ -158,34 +191,3 @@ point' :: String -> String -> Point
 point' x y = Point (-1*(read x)) (-1*(read y))
 
 
-
-{-
-import Graphics.UI.Gtk
---import System.Glib.UTFString
-
-main :: IO ()
-main = do
-  initGUI
-  window <- windowNew
-  hb     <- hBoxNew False 4
-  entry  <- entryNew
-  set entry [entryText := "entry"]
-  drawingArea <- drawingAreaNew
-  button <- buttonNewWithLabel "Reset"
-  set hb [
-    containerChild := button,
-    containerChild := entry,
-    containerChild := drawingArea]
-  set window [windowTitle := "Hello",
-              windowDefaultWidth := 800,
-              windowDefaultHeight := 800,
-              containerChild := hb]
-  set button [containerBorderWidth := 10]
-  onClicked button $ do
-    txt <- entryGetText entry
-    buttonSetLabel button (txt :: String)
-  onDestroy window mainQuit
-  widgetShowAll window
-  mainGUI
-
--}
