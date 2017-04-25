@@ -116,13 +116,7 @@ bazeContour gr = toVerges $ (L.minimumBy cntCmp $
   where
     -- сравниваем два контура.
     cntCmp :: VergeA -> VergeA -> Ordering
-    cntCmp = compare`on`toD
-      where
-        toD :: VergeA -> Double
-        toD v = L.sum elemsOfV / toEnum (L.length elemsOfV)
-          where
-            elemsOfV :: [Double]
-            elemsOfV = snd <$> elems v
+    cntCmp = compare`on`zOfConter
 
     toVerges :: VergeA -> [Verge]
     toVerges x = (\(a,(b, c)) -> (a, b)) <$> IM.toList x
@@ -181,8 +175,6 @@ bazeContour gr = toVerges $ (L.minimumBy cntCmp $
                     Just (i, d) -> (k, (i, d)) : go v i
                     Nothing     -> empty
 
--- VergeI -- Вершины с инде
-
 
 groupEq :: Ord b => (a -> b) -> [a] -> [[a]]
 groupEq f = groupBy ((==)`on`f) . sortBy (compare`on`f)
@@ -197,3 +189,26 @@ instance Ord a => Container (GraphA a) where
 
 useFst f (a1 ,_ , _) (a2, _, _) = f a1 a2
 useFst2 f (a1, _) (a2, _) = f a1 a2
+
+-----------------------------------------------------------------
+
+toListOfV :: VergeA -> [Int]
+toListOfV v = fst <$> elems v
+
+zOfConter :: VergeA -> Double
+zOfConter v = L.sum elemsOfV / toEnum (L.length elemsOfV)
+  where
+    elemsOfV :: [Double]
+    elemsOfV = snd <$> elems v
+
+pots :: VergeA -> [(Int, Double)]
+pots v = undefined
+  where
+    verts :: [Int]
+    verts = toListOfV v
+
+    z :: Double
+    z = zOfConter v
+
+    cList :: [(Int, Double)]
+    cList = (\(a, (b, d)) -> (a, d)) <$> IM.toList v
