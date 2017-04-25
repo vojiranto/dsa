@@ -17,10 +17,6 @@ defaultFgColor = Color 65535 65535 65535
 defaultBgColor :: Color
 defaultBgColor = Color 0 0 0
 
--- Необходимо хранить.
-    -- Края: xMin, xMax, yMin, yMax -- Ok.
-    -- Образ
-
 renderScene d lims p ev = do
     dw           <- widgetGetDrawWindow d
     (xMax, yMax) <- readIORef lims
@@ -78,7 +74,6 @@ main = do
     let setСontainers a b = do
             set a $ (containerChild :=) <$> b
 
-
     -- TODO проблема несовпадения типов vBox и drawing
     setСontainers hBox [vBox]
     setСontainers hBox [drawing]
@@ -125,24 +120,29 @@ main = do
     i <- newIORef $ Imagination 1 []
     onExpose drawing (renderScene drawing r i)
 
+    -- Обработчики ошибок
+    let catchRead :: Read a => String -> IO (Maybe a)
+        catchRead = cathF read
+
+        cathF :: (a -> b) -> a -> IO (Maybe b)
+        cathF f x = catch
+            (pure $! Just $! f $! x)
+            (\(_ :: SomeException) -> pure Nothing)
+
     -- Нажимаем на кнопку "Образ"
     onClicked b1 $ do
         [x',y',xMax, yMax, nInt] <- mapM entryGetText
             [ar1, ar2, arX, arY, ar3]
 
-        -- TODO Нужна обработка ошибок чтения.
-        xMax <- catch
-            (pure $! Just $! (read xMax :: Double))
-            (\(_ :: SomeException) ->
-                pure Nothing :: IO (Maybe Double))
-        yMax <- catch
-            (pure $! Just $! (read yMax :: Double))
-            (\(_ :: SomeException) ->
-                pure Nothing :: IO (Maybe Double))
-        if isJust xMax && isJust yMax then do
+        -- TODO Переработать обнаружение этой ошибки.
+        !t <- cathF (\p -> Point (shift x' p) (shift y' p)) $ Point 0 0
+
+        -- XXX Если использовать не список, и выставить аргументы
+        --     в ином порядке, то перестанет ловить ошибки.
+        l@[nInt, xMax, yMax] <- mapM catchRead [nInt, xMax, yMax]
+        if isJust t && all isJust l then do
             -- разворачиваем
-            Just xMax <- pure xMax
-            Just yMax <- pure yMax
+            [Just nInt, Just xMax, Just yMax] <- pure l
 
             writeIORef r (xMax, yMax)
             widgetDestroy drawing
@@ -151,27 +151,34 @@ main = do
                 sp         = Space
                     (Point (-1 * xMax) (-1 * yMax))
                     (Point       xMax        yMax )
-                (image, i') = formImagination f sp !! (read nInt)
+                (image, i') = formImagination f sp !! (fromEnum nInt)
 
             writeIORef i image
 
             setСontainers hBox [drawing]
             void $ onExpose drawing (renderScene drawing r i)
         else if
+            -- TODO настроить выдачу сообщений о ошибках
             | not.isJust $ xMax -> pure ()
             | not.isJust $ yMax -> pure ()
+            | not.isJust $ nInt -> pure ()
+            | not.isJust $ t    -> pure ()
         widgetShowAll window
 
     onClicked b2 $ do
         [x',y',xMax, yMax, nInt] <- mapM entryGetText
             [ar1, ar2, arX, arY, ar3]
         im <- readIORef i
-        let (im', i') = stepImagination f (im, 0)
-            f p       = Point (shift x' p) (shift y' p)
-        writeIORef i im'
-        widgetDestroy drawing
-        setСontainers hBox [drawing]
-        void $ onExpose drawing (renderScene drawing r i)
+
+        -- TODO Переработать обнаружение этой ошибки.
+        !t <- cathF (\p -> Point (shift x' p) (shift y' p)) $ Point 0 0
+        when (isJust t) $ do
+            let (im', i') = stepImagination f (im, 0)
+                f p       = Point (shift x' p) (shift y' p)
+            writeIORef i im'
+            widgetDestroy drawing
+            setСontainers hBox [drawing]
+            void $ onExpose drawing (renderScene drawing r i)
         widgetShowAll window
 
     onDestroy window mainQuit

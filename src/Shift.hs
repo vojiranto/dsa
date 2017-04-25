@@ -108,7 +108,7 @@ fromStr = \case
 
 -- Делим список на подсписки.
 spaner :: Query a -> Fold a b -> [a] -> [b]
-spaner query foldf list = case span query list of
+spaner !query !foldf !list = case span query list of
     (a, _:ls) ->  foldf a:spaner query foldf ls
     (a, _)    -> [foldf a]
 
@@ -121,15 +121,15 @@ cleaning = foldr' (\a b -> case a of
 
 -- Расстановка скобок.
 bracket :: String -> [Lex]
-bracket str = fst (bracket' [] str) ++ end
+bracket !str = fst (bracket' [] str) ++ end
   where
-    br = snd $ bracket' [] str
+    br = snd $! bracket' [] str
     end = if
         | br == ""  -> []
         | otherwise -> bracket br
 
 bracket' :: [Lex] -> String -> ([Lex], String)
-bracket' l (s:sx) = if
+bracket' !l !(s:sx) = if
     -- Нужна внешняя функции которая рзберет sx.
     | s == ')' -> (reverse l, sx)
     | s == '(' -> bracket' (Bracket (fst brackets) : l) (snd brackets)
@@ -146,7 +146,7 @@ bracket' l "" = (reverse l, "")
 -- Выделение отдельных лексем.
 lexer :: Lex -> String -> (Lex, String)
 -- Обрабатываем первый символ лексемы.
-lexer (Lex "") (s:sx) = if
+lexer !(Lex "") !(s:sx) = if
     | isNumber s     -> lexer (Int $ read [s]) sx
     | s == ' '       -> (Lex "", sx)
     | s == ')'       -> (Lex "", ')':sx)
@@ -154,23 +154,24 @@ lexer (Lex "") (s:sx) = if
     | s`elem`"+-*/," -> (Lex [s], sx)
     | otherwise      -> lexer (Lex [s]) sx
 -- Обрабатываем названия функций.
-lexer (Lex xs) (s:sx) = if
-    | isNumber s     -> (Err "Число не может быть частью названия функции!", sx)
-    | s == ' '       -> (Lex $ reverse xs, sx)
-    | s`elem`"()+-*/,"-> (Lex $ reverse xs, s:sx)
-    | otherwise      -> lexer (Lex $ s:xs) sx
+lexer !(Lex xs) !(s:sx) = if
+    | isNumber s     -> error "Число не может быть частью названия функции!"
+
+    | s == ' '       -> (Lex $! reverse xs, sx)
+    | s`elem`"()+-*/,"-> (Lex $! reverse xs, s:sx)
+    | otherwise      -> lexer (Lex $! s:xs) sx
 -- обрабатываем числа.
-lexer (Int i) (s:sx) = if
-    | isNumber s     -> lexer (Int $ 10*i + read [s]) sx
+lexer !(Int i) !(s:sx) = if
+    | isNumber s     -> lexer (Int $! 10*i + read [s]) sx
     | s == ' '       -> (Int i, sx)
     | s`elem`"()+-*/," -> (Int i, s:sx)
     | s == '.'       -> lexer (Double i 0.1) sx
-    | otherwise      -> (Err "Буква не может быть частью числа", sx)
-lexer (Double i d) (s:sx) = if
+    | otherwise      -> error "Буква не может быть частью числа"
+lexer !(Double i d) !(s:sx) = if
     | isNumber s     -> lexer (Double (i + d * (read [s])) (d/10)) sx
     | s == ' '       -> (Int i, sx)
     | s`elem`"()+-*/,"-> (Int i, s:sx)
-    | otherwise      -> (Err "Буква не может быть частью числа", sx)
-lexer s _ = case s of
+    | otherwise      -> error "Буква не может быть частью числа"
+lexer !s _ = case s of
     Double i _ -> (Int i, "")
     _          -> (s, "")

@@ -1,61 +1,201 @@
-{-#Language MultiWayIf, LambdaCase, TupleSections#-}
-module Lib (
-    Imagination(..),
-    Point(..),
-    someFunc,
-    formLexTree
-  ) where
+{-#Language ScopedTypeVariables, BangPatterns, MultiWayIf#-}
+module Lib (someFunc) where
 
-import System.Clock
-import Control.Monad ( unless, forM, void, forM_)
-import System.Exit ( exitWith, ExitCode(ExitSuccess) )
-import Graphics.UI.GLUT hiding ( initialize, shift)
-import Graphics.Rendering.OpenGL.GL.Tensor
-import Data.IORef
-import Data.Char
-import Data.List
-
-import Stratification
-import SymbolicImage
-import GrBuild
-import Point
-import Morse
+import Graphics.UI.Gtk hiding (Point)
+import Graphics.UI.Gtk.Gdk.GC
+import Graphics.UI.Gtk hiding (Color, Point, Object)
 import Shift
+import Control.Monad
+import Data.Maybe
+import Control.Exception
+import Data.IORef as R
+import SymbolicImage
 import Data
-import Quar
-import Jac
-import Graph
-import Gr
+import Point
+
+defaultFgColor :: Color
+defaultFgColor = Color 65535 65535 65535
+
+defaultBgColor :: Color
+defaultBgColor = Color 0 0 0
+
+renderScene d lims p ev = do
+    dw           <- widgetGetDrawWindow d
+    (xMax, yMax) <- readIORef lims
+    Imagination d' p <- readIORef p
+
+    (w, h) <- widgetGetSize d
+    gc     <- gcNew dw
+    let fg = color 0 0 0
+    gcSetValues gc $ newGCValues { foreground = fg }
+    let wM = round (xMax * 2)
+        hM = round (yMax * 2)
+        tr (x, y) = (
+            round (x *        toEnum w) `div` wM + w`div`2,
+            round (y * (-1) * toEnum h) `div` hM + h`div`2)
+        drawLine' x y = drawLine dw gc (tr x) (tr y)
+
+    -- Оси OX и OY
+    drawLine' (0, -yMax) (0, yMax)
+    drawLine' (-xMax, 0) (xMax, 0)
+
+    -- Насечки (мелкие)
+    forM_ [-xMax, -xMax+0.1..xMax] $ \i -> do
+        drawLine' (i, 0.01) (i, -0.01)
+    forM_ [-yMax, -yMax+0.1..yMax] $ \i -> do
+        drawLine' (0.01, i) (-0.01, i)
+
+    -- насечки крупные
+    forM_ [-xMax..xMax] $ \i -> do
+        drawLine' (i, 0.1) (i, -0.1)
+
+    forM_ [-yMax..yMax] $ \i -> do
+        drawLine' (0.1, i) (-0.1, i)
+    let pTr (Point x y) = tr (x, y)
+    drawPoints dw gc $ pTr.fromCeil d' <$> p
+    return True
 
 someFunc :: IO ()
-someFunc = grInit $ \win -> do
-    -- глобальная переменная для хранения состояния программы.
-    st  <- newIORef $ createSt
+someFunc = do
+    initGUI
+    window  <- windowNew
+    hBox    <- hBoxNew False 4
+    vBox    <- vBoxNew False 4
+    hl@[h1, h2, h3,hx,hy, h4, h5,her] <- forM [1..8] $
+        const (hBoxNew False 4)
+    [   ar1, ar2, ar3,
+        arX, arY] <- forM [1..5] (const entryNew)
+    drawing <- drawingAreaNew
 
-    displayCallback $= Gr.display st
-    reshapeCallback $= Just reshape
-    keyboardMouseCallback $= Just (keyboardMouseHandler st)
+    set window [
+        windowDefaultWidth := 900,
+        windowDefaultHeight := 600,
+        containerChild := hBox,
+        windowTitle := "DSA – Dinamic Sistem Analiser"]
 
-    forM_ [(0, ok1k), (40, ok2k)] $ \(i, call) ->
-        createButton win (Position 0 i) (Size 100 30) (call st)
+    let setСontainers a b = do
+            set a $ (containerChild :=) <$> b
+
+    -- TODO проблема несовпадения типов vBox и drawing
+    setСontainers hBox [vBox]
+    setСontainers hBox [drawing]
+
+    l0 <- labelNewWithMnemonic "Введите формулы"
+    setСontainers vBox [l0]
+    boxSetChildPacking vBox l0 PackNatural 4 PackStart
+
+    setСontainers vBox hl
+
+    let extr hBox ar txt1 txt2 = do
+            lExt <- labelNewWithMnemonic txt1
+            setСontainers hBox [lExt]
+            setСontainers hBox [ar]
+            entrySetText  ar txt2
+
+    extr h1 ar1 "x' = " "1 + y - 1.4 * pot(x, 2)"
+    extr h2 ar2 "y' = " "0.3*x"
 
 
-createButton win position size callback = do
-    ok <- createSubWindow win position size
-    displayCallback       $= showGround white
-    keyboardMouseCallback $= Just callback
-    return ok
+    extr hx arX "x max = "  "1.5"
+    extr hy arY "y max = "  "1"
+    extr h3 ar3 "Число итераций = " "5"
 
+    let buttons h txt = forM txt $ \txt -> do
+             b <- buttonNewWithLabel txt
+             setСontainers h [b]
+             return b
 
-showGround color = do
-    clearColor $= color
-    clear [ColorBuffer]
-    swapBuffers
+    [b1, b2] <- buttons h4 ["Образ", "Дополнительная итерация"]
+    [b3] <- buttons h5 ["Спектр морса"]
 
-instance Num a => White (Color4 a) where
-    white = Color4 1 1 1 1
+    -- Настраиваем упаковку аплетов
+    boxSetChildPacking hBox vBox PackNatural 4 PackStart
+    boxSetChildPacking hBox drawing PackGrow 4 PackStart
 
------------------------------------------------------------------
--- [1] Расслоение.
--- [2] Поиск min и max.
+    forM_ hl $ \a ->
+        boxSetChildPacking vBox a PackNatural 4 PackStart
+
+    let bg = color 1 1 1
+    widgetModifyBg drawing StateNormal bg
+
+    r <- newIORef (1.5, 1)
+    i <- newIORef $ Imagination 1 []
+    onExpose drawing (renderScene drawing r i)
+
+    -- Обработчики ошибок
+    let catchRead :: Read a => String -> IO (Maybe a)
+        catchRead = cathF read
+
+        cathF :: (a -> b) -> a -> IO (Maybe b)
+        cathF f x = catch
+            (pure $! Just $! f $! x)
+            (\(_ :: SomeException) -> pure Nothing)
+
+    -- Нажимаем на кнопку "Образ"
+    onClicked b1 $ do
+        [x',y',xMax, yMax, nInt] <- mapM entryGetText
+            [ar1, ar2, arX, arY, ar3]
+
+        -- TODO Переработать обнаружение этой ошибки.
+        !t <- cathF (\p -> Point (shift x' p) (shift y' p)) $ Point 0 0
+
+        -- XXX Если использовать не список, и выставить аргументы
+        --     в ином порядке, то перестанет ловить ошибки.
+        l@[nInt, xMax, yMax] <- mapM catchRead [nInt, xMax, yMax]
+        if isJust t && all isJust l then do
+            -- разворачиваем
+            [Just nInt, Just xMax, Just yMax] <- pure l
+
+            writeIORef r (xMax, yMax)
+            widgetDestroy drawing
+
+            let f p        = Point (shift x' p) (shift y' p)
+                sp         = Space
+                    (Point (-1 * xMax) (-1 * yMax))
+                    (Point       xMax        yMax )
+                (image, i') = formImagination f sp !! (fromEnum nInt)
+
+            writeIORef i image
+
+            setСontainers hBox [drawing]
+            void $ onExpose drawing (renderScene drawing r i)
+        else if
+            -- TODO настроить выдачу сообщений о ошибках
+            | not.isJust $ xMax -> pure ()
+            | not.isJust $ yMax -> pure ()
+            | not.isJust $ nInt -> pure ()
+            | not.isJust $ t    -> pure ()
+        widgetShowAll window
+
+    onClicked b2 $ do
+        [x',y',xMax, yMax, nInt] <- mapM entryGetText
+            [ar1, ar2, arX, arY, ar3]
+        im <- readIORef i
+
+        -- TODO Переработать обнаружение этой ошибки.
+        !t <- cathF (\p -> Point (shift x' p) (shift y' p)) $ Point 0 0
+        when (isJust t) $ do
+            let (im', i') = stepImagination f (im, 0)
+                f p       = Point (shift x' p) (shift y' p)
+            writeIORef i im'
+            widgetDestroy drawing
+            setСontainers hBox [drawing]
+            void $ onExpose drawing (renderScene drawing r i)
+        widgetShowAll window
+
+    onDestroy window mainQuit
+    windowSetPosition window WinPosCenter
+    widgetShowAll window
+    mainGUI
+
+color r g b = Color
+    (round $ 65535 * r)
+    (round $ 65535 * g)
+    (round $ 65535 * b)
+
+point :: String -> String -> Point
+point x y = Point (read x) (read y)
+
+point' :: String -> String -> Point
+point' x y = Point (-1*(read x)) (-1*(read y))
 
