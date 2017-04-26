@@ -195,20 +195,37 @@ useFst2 f (a1, _) (a2, _) = f a1 a2
 toListOfV :: VergeA -> [Int]
 toListOfV v = fst <$> elems v
 
+
 zOfConter :: VergeA -> Double
 zOfConter v = L.sum elemsOfV / toEnum (L.length elemsOfV)
   where
     elemsOfV :: [Double]
     elemsOfV = snd <$> elems v
 
+
+-- (1) стр. 110.
 pots :: VergeA -> [(Int, Double)]
-pots v = undefined
+pots v = go start 0 v
   where
-    verts :: [Int]
-    verts = toListOfV v
+    start :: Int
+    start = L.head $ IM.keys v
+
+    go :: Int ->  Double -> VergeA -> [(Int, Double)]
+    go i d v = if
+        | Just (int, dou) <- i' -> let
+                d' = dou + d - z
+            in (i, d) : go int d' v'
+        | otherwise      -> []
+      where
+        v' :: VergeA
+        v' = IM.delete i v
+
+        i' :: Maybe (Int, Double)
+        i' = i `IM.lookup` v
 
     z :: Double
     z = zOfConter v
 
-    cList :: [(Int, Double)]
-    cList = (\(a, (b, d)) -> (a, d)) <$> IM.toList v
+-- (2) стр. 110
+startM1 :: VergeA -> [Int]
+startM1 v = fst <$> pots v

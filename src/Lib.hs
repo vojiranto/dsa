@@ -61,7 +61,7 @@ someFunc = do
     window  <- windowNew
     hBox    <- hBoxNew False 4
     vBox    <- vBoxNew False 4
-    hl@[h1, h2, h3,hx,hy, h4, h5,her] <- forM [1..8] $
+    hl@[h0, h1, h2, h3,hx,hy, h4, h5, hs1, hs2,her] <- forM [1..11] $
         const (hBoxNew False 4)
     [   ar1, ar2, ar3,
         arX, arY] <- forM [1..5] (const entryNew)
@@ -73,37 +73,19 @@ someFunc = do
         containerChild := hBox,
         windowTitle := "DSA – Dinamic Sistem Analiser"]
 
-    let setСontainers a b = do
-            set a $ (containerChild :=) <$> b
-
     -- TODO проблема несовпадения типов vBox и drawing
     setСontainers hBox [vBox]
     setСontainers hBox [drawing]
 
-    l0 <- labelNewWithMnemonic "Введите формулы"
-    setСontainers vBox [l0]
-    boxSetChildPacking vBox l0 PackNatural 4 PackStart
-
     setСontainers vBox hl
-
-    let extr hBox ar txt1 txt2 = do
-            lExt <- labelNewWithMnemonic txt1
-            setСontainers hBox [lExt]
-            setСontainers hBox [ar]
-            entrySetText  ar txt2
-
+    setLavelNew h0 "Введите формулы"
     extr h1 ar1 "x' = " "1 + y - 1.4 * pot(x, 2)"
     extr h2 ar2 "y' = " "0.3*x"
 
 
     extr hx arX "x max = "  "1.5"
     extr hy arY "y max = "  "1"
-    extr h3 ar3 "Число итераций = " "5"
-
-    let buttons h txt = forM txt $ \txt -> do
-             b <- buttonNewWithLabel txt
-             setСontainers h [b]
-             return b
+    extr h3 ar3 "Число итераций = " "7"
 
     [b1, b2] <- buttons h4 ["Образ", "Дополнительная итерация"]
     [b3] <- buttons h5 ["Спектр морса"]
@@ -193,9 +175,32 @@ color r g b = Color
     (round $ 65535 * g)
     (round $ 65535 * b)
 
+
 point :: String -> String -> Point
 point x y = Point (read x) (read y)
+
 
 point' :: String -> String -> Point
 point' x y = Point (-1*(read x)) (-1*(read y))
 
+
+setСontainers a b = do
+    set a $ (containerChild :=) <$> b
+
+
+extr hBox ar txt1 txt2 = do
+    setLavelNew hBox txt1
+    setСontainers hBox [ar]
+    entrySetText  ar txt2
+
+
+setLavelNew bx lb = do
+    l <- labelNewWithMnemonic lb
+    setСontainers bx [l]
+    return l
+
+
+buttons h txt = forM txt $ \txt -> do
+    b <- buttonNewWithLabel txt
+    setСontainers h [b]
+    return b
