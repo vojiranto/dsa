@@ -38,6 +38,7 @@ type Graph2 = Array Int (IntMap Double) -- граф
 type Circuit = [(Int,Int, Double)]              -- контур
 
 
+minBazeCircuit, maxBazeCircuit :: Graph2 -> Circuit
 minBazeCircuit = bazeCircuit (compare`on`snd)
 maxBazeCircuit = bazeCircuit (\a b -> compare (snd b) (snd a))
 
@@ -229,9 +230,9 @@ modifyArray a i f = do
     e <- readArray a i
     writeArray a i (f e)
 
-
-minOptZ gr = optZ (<=) gr (minBazeCircuit gr)
-maxOptZ gr = optZ (>=) gr (maxBazeCircuit gr)
+minOptZ, maxOptZ :: Graph2 -> Double
+minOptZ gr = runST $ optZ (<=) gr (minBazeCircuit gr)
+maxOptZ gr = runST $ optZ (>=) gr (maxBazeCircuit gr)
 
 
 optZ cmp gr cir = do

@@ -1,4 +1,4 @@
-{-#Language LambdaCase, BangPatterns#-}
+{-#Language LambdaCase, BangPatterns, TypeFamilies#-}
 module SymbolicImage (
     formImagination,
     stepImagination,
@@ -28,7 +28,7 @@ formImagination f s = iterate
 
 
 -- Нахождение всех цеклических вершин графа.
-cyclics :: Ord key => Graf node key -> [node]
+cyclics :: (Ord key, node ~ key) => Graf node key -> [node]
 cyclics g = concat [a | CyclicSCC a <- stronglyConnComp g]
 
 

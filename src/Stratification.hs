@@ -9,6 +9,11 @@ import Point
 import SymbolicImage (fromRad, toRad, fromCeil, toCeil, cyclics, myNub)
 import Jac (jac, e)
 
+str :: F Point -> Imagination -> Int -> Stratification
+str fp im i = iterate
+    (stepStratification fp)
+    (toStratification im) !! i
+
 -- Один шаг с подразбиением.
 stepStratification :: F Point-> F Stratification
 stepStratification fp (Stratification d1 d2 ls) = Stratification
