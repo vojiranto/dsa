@@ -20,7 +20,7 @@ morse fp im i = mrsElem <$> cyc
     cyc = cyclics g
 
     mrsElem :: [(Ceil3, [(Ceil3, Double)])] -> (Double, Double)
-    mrsElem a = (minOptZ gr, maxOptZ gr)
+    mrsElem a = (zOfCircuit $ minBazeCircuit gr, zOfCircuit $ maxBazeCircuit gr)
         where gr = formGraph a
 
     (Stratification d1 d2 ls) = str fp im i
@@ -34,22 +34,22 @@ morse fp im i = mrsElem <$> cyc
 cyclics g = M.toList <$> do
     CyclicSCC a <- stronglyConnComp $
         (\(a, b, c) -> (a, b, fst <$> c)) <$> g
-    let g' = M.fromList $ (\(a, _, b) -> (a, b)) <$> g
-        a' = M.fromList $ (\a -> (a, undefined)) <$> a
+    let g' = M.fromList $! (\(a, _, b) -> (a, b)) <$> g
+        a' = M.fromList $! (\a -> (a, undefined)) <$> a
     return $ M.intersection g' a'
 
 
 shiftCeil :: Diameter -> Diameter -> F Point -> Ceil3 -> [(Ceil3, Double)]
-shiftCeil d1 d2 fp (Ceil3 c l) = myNub $
-    (\i -> (Ceil3 p' (tr $ i), log $ frP.abs $ trp i)) <$> list
+shiftCeil d1 d2 fp (Ceil3 c l) = myNub $!
+    (\i -> (Ceil3 p' (tr $! i), log $ frP.abs $ trp i)) <$> list
   where
     p' :: Ceil
     p' = toCeil d1 $ fp ceilCenter
 
     frP (Point x y) = x
 
-    tr i  = fromRad d2 $ arc $ signum $ trp i
-    trp i = toPoint $ jacobian * e i
+    tr i  = fromRad d2 $! arc $! signum $! trp i
+    trp i = toPoint $! jacobian * e i
 
     list :: [Double]
     list = do

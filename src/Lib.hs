@@ -14,6 +14,7 @@ import Data.Maybe
 import Control.Exception
 import Data.IORef as R
 import SymbolicImage
+import Morse
 import Data
 import Point
 
@@ -164,6 +165,20 @@ someFunc = do
             widgetDestroy drawing
             setСontainers hBox [drawing]
             void $ onExpose drawing (renderScene drawing r i)
+        widgetShowAll window
+
+    onClicked b3 $ do
+        [x',y',xMax, yMax, nInt] <- mapM entryGetText
+            [ar1, ar2, arX, arY, ar3]
+        im <- readIORef i
+
+        -- TODO Переработать обнаружение этой ошибки.
+        !t <- cathF (\p -> Point (shift x' p) (shift y' p)) $ Point 0 0
+        when (isJust t) $ do
+            let f p       = Point (shift x' p) (shift y' p)
+            -- вычисление спектра морса
+            print $ morse f im 0
+            return ()
         widgetShowAll window
 
     onDestroy window mainQuit

@@ -2,23 +2,25 @@
     TupleSections,
     RankNTypes,
     MultiWayIf,
+    BangPatterns,
     FlexibleContexts,
     LambdaCase #-}
 module Graph where
 
 import Data.Array.ST
 import Data.Array       as A
-import Data.IntMap      as IM
-import Data.Map         as M
+import Data.IntMap.Strict as IM
+import Data.Map.Strict    as M
+import Control.Monad.Fix
 import Data.List        as L
 import Data.Maybe       as MB
 import Control.Monad
 import Data.Function
 import Data.Monoid
 import Data.STRef
-import Data.Set         as S
+import Data.Set   as S
 import Data
-import Control.Monad.ST
+import Control.Monad.ST.Strict
 
 -----------------------------------------------------------------
 -- Структуры
@@ -48,47 +50,47 @@ bazeCircuit cmp gr = minCircuit separation
   where
     -- Минимальное из исходящих рёбер.
     min :: IntMap Double -> (Int, Double)
-    min = minimumBy cmp . IM.toList
+    !min = minimumBy cmp . IM.toList
 
     -- число вершин
     n :: Int
-    n = snd . bounds $ gr
+    !n = snd . bounds $ gr
 
     -- рёбра с наименьшей степенью.
     -- номер вершины начала, совпадает с индексом в списке.
     -- индексы в списке отсчитываются начиная от 1.
     minRibs :: [(Int, Double)]
-    minRibs = min <$> A.elems gr
+    !minRibs = min <$!> A.elems gr
 
     ends :: Array Int Int
-    ends = listArray (1, n) $ fst <$> minRibs
+    !ends = listArray (1, n) $ fst <$> minRibs
 
     -- подсчитываем степень вершин.
     pots :: [(Int, Int)]
-    pots = (\a -> (fst $ head a, length a)) <$>
+    !pots = (\a -> (fst $! head a, length a)) <$!>
         groupEq fst minRibs
 
     -- список вершин с нулевой степенью.
     listS0 :: [Int]
-    listS0 = S.toList $ S.difference
-        (S.fromList [1..n]) (S.fromList $ fst <$> pots)
+    !listS0 = S.toList $ S.difference
+        (S.fromList [1..n]) (S.fromList $! fst <$!> pots)
 
     -- выбор контура с минимальной характеристикой
     minCircuit :: [Circuit] -> Circuit
-    minCircuit c = snd $ minimumBy (compare`on`fst) c'
+    minCircuit !c = snd $ minimumBy (compare`on`fst) c'
       where
         -- модифицируем список, чтобы сократить повторные расчёты.
         c' :: [(Double, Circuit)]
-        c' = (\x -> (zOfCircuit x, x)) <$> c
+        !c' = (\x -> (zOfCircuit x, x)) <$!> c
 
     -- вершины траекторий, среди которых есть базовый контур.
     stDo :: [Int]
-    stDo = IM.keys $ runST $ do
+    stDo = IM.keys $! runST $ do
         -- вершины со степенью ноль.
         s0 <- newSTRef listS0
         -- вершины с не нулевой степенью.
-        sp <- newSTRef $ IM.fromList pots
-        let go = do
+        sp <- newSTRef $! IM.fromList pots
+        let go s0 = do
                 list <- readSTRef s0
                 if L.null list then readSTRef sp
                 else do
@@ -103,39 +105,38 @@ bazeCircuit cmp gr = minCircuit separation
                     go
 
             upd :: Int -> Maybe Int
-            upd x = if x > 0 then Just $ x - 1 else Nothing
+            upd !x = if x > 0 then Just $! x - 1 else Nothing
         go
-        readSTRef sp
 
     ribs :: IntMap (Int, Double)
-    ribs = IM.intersection
-        (IM.fromList $ zip [1..] minRibs)
-        (IM.fromList $ (,"") <$> stDo)
+    !ribs = IM.intersection
+        (IM.fromList $! zip [1..] minRibs)
+        (IM.fromList $! (,"") <$!> stDo)
 
     separation :: [Circuit]
-    separation = go ribs
+    !separation = go ribs
       where
         go :: IntMap (Int, Double) -> [Circuit]
-        go x = if
+        go !x = if
             | Prelude.null x -> []
             | otherwise -> circuit : go (IM.difference x cir)
           where
             cir :: IntMap (Int, Double)
-            cir = IM.fromList $ (\(a,b,c) -> (a, (b, c))) <$> circuit
+            !cir = IM.fromList $! (\(a,b,c) -> (a, (b, c))) <$!> circuit
 
             -- контур
             circuit :: Circuit
-            circuit = stape st
+            !circuit = stape st
 
             -- точка отсёта траекторий
             st :: Int
-            st = fst.head $ IM.toList x
+            !st = fst.head $! IM.toList x
 
             -- перебираем по шагам
             stape :: Int -> Circuit
-            stape a = case a`IM.lookup`x of
-                Just (i, d) | i /= st -> (a, i, d):stape i
-                _                     -> []
+            stape !a = case a`IM.lookup`x of
+                Just (!i, !d) | i /= st -> (a, i, d):stape i
+                _                       -> []
 
 -- размыкание контура путём удаления одного ребра.
 unlock :: F Circuit
@@ -152,15 +153,15 @@ formGraph gr = array (1, n) ribs
 
     -- множество вершин.
     setOfC :: Set Ceil3
-    setOfC = S.fromList $ fst <$> gr
+    setOfC = S.fromList $! fst <$!> gr
 
     -- список определяющий соответсвия.
     listOfC :: Map Ceil3 Int
-    listOfC = M.fromList $ zip (S.toList setOfC) [1..]
+    listOfC = M.fromList $! zip (S.toList setOfC) [1..]
 
     -- Меняем Ceil -> Int
     intForm :: [(Int, [(Int, Double)])]
-    intForm = (\(a, b) -> (toInt a, MB.mapMaybe toInt' b)) <$> gr
+    intForm = (\(a, b) -> (toInt a, MB.mapMaybe toInt' b)) <$!> gr
       where
         -- первичные ключи существуют все.
         toInt :: Ceil3 -> Int
@@ -175,7 +176,7 @@ formGraph gr = array (1, n) ribs
 
     -- список рёбер
     ribs :: [(Int, IntMap Double)]
-    ribs = (\(x, y) -> (x, IM.fromList y)) <$> intForm
+    ribs = (\(x, y) -> (x, IM.fromList y)) <$!> intForm
 
 
 -- сгруппировать эквивалентные по признаку.
@@ -217,36 +218,42 @@ headOfCircuit c = fst3 $ head c
 
 -- характеристика контура.
 zOfCircuit :: Circuit -> Double
+{-#INLINE zOfCircuit#-}
 zOfCircuit v = sum elemsOfV / toEnum (length v)
   where
     elemsOfV :: [Double]
-    elemsOfV = (\(_,_,a) -> a) <$> v
+    elemsOfV = (\(_,_,a) -> a) <$!> v
 
 
 -- модификация элемента.
 modifyArray :: (MArray array elem m, Ix index) =>
     array index elem -> index -> (elem -> elem) -> m ()
+{-#INLINE modifyArray#-}
 modifyArray a i f = do
     e <- readArray a i
     writeArray a i (f e)
 
 minOptZ, maxOptZ :: Graph2 -> Double
-minOptZ gr = runST $ optZ (<=) gr (minBazeCircuit gr)
-maxOptZ gr = runST $ optZ (>=) gr (maxBazeCircuit gr)
+minOptZ gr = optZ' (<=) gr (minBazeCircuit gr)
+maxOptZ gr = optZ' (>=) gr (maxBazeCircuit gr)
 
 
-optZ cmp gr cir = do
+--
+--
+--
+
+optZ cmp gr cir = mfix (\fm cir -> do
     -- п.2.
     let (_, n) = bounds gr
         setM1  = S.fromList $ fst3 <$> cir
-    m2  <- newSTRef $ S.difference (S.fromList [1..n]) setM1
-    m1  <- newSTRef $ fromCir cir
-    m0  <- newSTRef $ S.empty
+    m2  <- newSTRef $! S.difference (S.fromList [1..n]) setM1
+    m1  <- newSTRef $! fromCir cir
+    m0  <- newSTRef $! S.empty
     (tree, rev, root) <- formTree gr cir
     -- храним множество потенциалов.
-    potSet <- newSTRef $ IM.fromList $ pots cir
+    potSet <- newSTRef $! IM.fromList $! pots cir
     let z = zOfCircuit cir
-        cycleA = do
+        cycleA m0 m1 m2 tree rev root = do
             m1' <- readSTRef m1
             -- если список не пуст, делать.
             if isEmpty m1' then do
@@ -258,7 +265,7 @@ optZ cmp gr cir = do
                 -- (b)
                 potSet' <- readSTRef potSet
                 let vi1 = v x potSet'
-                    cycleB (y:ys) = do
+                    cycleB m0 m1 m2 tree rev root (y:ys) = do
                         let w = vi1 + cOf gr x y - z
                         m2'  <- readSTRef m2
                         isPr <- prev rev y x
@@ -268,11 +275,11 @@ optZ cmp gr cir = do
                                 modifySTRef potSet (IM.insert y w)
                                 modifyArray tree x (S.insert y)
                                 writeArray rev y x
-                                cycleB ys
-                            | cmp w (v y potSet') -> cycleA
+                                cycleB m0 m1 m2 tree rev root ys
+                            | cmp w (v y potSet') -> cycleA m0 m1 m2 tree rev root
                             | isPr || preceded y cir -> do
                                 cir' <- newCircuit gr rev cir x y []
-                                optZ cmp gr cir'
+                                return fm cir'
                             | otherwise -> do
                                 modifySTRef potSet (IM.insert y w)
                                 x' <- readArray rev y
@@ -282,11 +289,13 @@ optZ cmp gr cir = do
                                 when (y`S.member`m0') $ do
                                     modifySTRef m0 (S.delete y)
                                     modifySTRef m1 (cons y)
-                                cycleA
-                    cycleB [] = cycleA
-                cycleB (fst <$> (IM.toList $ gr A.! x))
+                                cycleA m0 m1 m2 tree rev root
+                    cycleB m0 m1 m2 tree rev root [] = cycleA m0 m1 m2 tree rev root
+                cycleB m0 m1 m2 tree rev root (fst <$!> (IM.toList $! gr A.! x))
             else return z
-    cycleA
+    cycleA m0 m1 m2 tree rev root
+  ) cir
+
 
 
 -- находим предшествует ли элемент другому в дереве.
@@ -311,12 +320,13 @@ cirF y = \case
 v :: Int -> IntMap Double -> Double
 v x p = fromJust $ x`IM.lookup`p
 
-
 cOf :: Graph2 -> Int -> Int -> Double
+{-#INLINE cOf#-}
 cOf gr a b = fromJust $ b`IM.lookup`(gr A.! a)
 
 
 preceded :: Int -> Circuit -> Bool
+{-#INLINE preceded#-}
 preceded a cir = elem a $ fst3 <$> cir
 
 
@@ -396,3 +406,81 @@ emptyList = DList [] []
 
 instance Functor DList where
     fmap f (DList x y) = DList (fmap f x) (fmap f y)
+
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+optZ' :: (Double -> Double -> Bool) -> Graph2 -> Circuit -> Double
+optZ' !cmp !gr !cir =
+    -- п.2.
+    let (_, n) = bounds gr
+        setM1  = S.fromList $ fst3 <$> cir
+        m2 = S.difference (S.fromList [1..n]) setM1
+        m1 = fromCir cir
+        m0 = S.empty
+        (tree, rev, root) = formTree' cir
+        -- храним множество потенциалов.
+        potSet = IM.fromList $! pots cir
+        z = zOfCircuit cir
+
+    in cycleA z cmp gr m0 m1 m2 tree rev root potSet cir
+
+cycleA :: Double -> (Double -> Double -> Bool) -> Graph2 -> Set Int ->
+    DList Int -> Set Int -> IntMap (IntMap Double) -> IntMap Int -> Int ->
+    IntMap Double -> Circuit -> Double
+cycleA !z !cmp !gr !m0 !m1 !m2 !tree !rev !root !potSet !cir
+    | isEmpty m1 = cycleB z vi1 x cmp gr m0' m1' m2 tree rev root potSet cir (fst <$!> (IM.toList $! gr A.! x))
+    | otherwise  = z
+  where
+    (!x, !m1') = headTail m1
+    !m0' = S.insert x m0
+    !vi1 = v x potSet
+
+cycleB :: Double -> Double -> Int -> (Double -> Double -> Bool) ->
+    Graph2 -> Set Int -> DList Int -> Set Int -> IntMap (IntMap Double) ->
+    IntMap Int -> Int -> IntMap Double -> Circuit -> [Int] -> Double
+cycleB !z !vi1 !x !cmp !gr !m0 !m1 !m2 !tree !rev !root !potSet !cir !(y:ys)
+    | y`S.member`m2 =
+        let !m1' = snoc y m1
+            !m2' = S.delete y m2
+            !tree' = IM.adjust (IM.insert y (cOf gr x y)) x tree
+            !rev'  = IM.insert y x rev
+            !potSet' = IM.insert y w potSet
+        in cycleB z vi1 x cmp gr m0 m1' m2' tree' rev' root potSet' cir ys
+    | cmp w (v y potSet) = cycleA z cmp gr m0 m1 m2 tree rev root potSet cir
+    | prev' rev y x || preceded y cir = optZ' cmp gr  (newCircuit' gr rev cir x y [])
+    | otherwise =
+        let !potSet' = IM.insert y w potSet
+            !x' = fromJust $ y`IM.lookup`rev
+            !tree' = IM.adjust (IM.delete y) x' tree
+            !rev'  = IM.insert y x rev
+            (!m0', !m1') = if y`S.member`m0
+                then (S.delete y m0, cons y m1)
+                else (m0, m1)
+        in cycleA z cmp gr m0' m1' m2 tree' rev' root potSet' cir
+  where
+    w = vi1 + cOf gr x y - z
+cycleB !z !vi1 !x !cmp !gr !m0 !m1 !m2 !tree !rev !root !potSet !cir ![] =
+    cycleA z cmp gr m0 m1 m2 tree rev root potSet cir
+
+
+formTree' :: Circuit -> (IntMap (IntMap Double), IntMap Int, Int)
+formTree' cir = (
+    IM.fromList $ (\(a, b, d) -> (a, IM.singleton b d)) <$> icir,
+    IM.fromList $ (\(a, b, _) -> (b, a)) <$> icir,
+    headOfCircuit cir)
+  where icir = init cir
+
+
+prev' :: IntMap Int -> Int -> Int -> Bool
+prev' rev y x = case x`IM.lookup`rev of
+    Just x' | x' == y   -> True
+            | otherwise -> prev' rev y x'
+    _                   -> False
+
+
+newCircuit' :: Graph2 -> IntMap Int -> Circuit -> Int -> Int -> Circuit -> Circuit
+newCircuit' gr rev cir y x l = case x`IM.lookup`rev of
+    Just x' | x' == y   -> reverse $ (x, x', cOf gr x x'):l
+            | otherwise -> newCircuit'
+                gr rev cir y x' ((x, x', cOf gr x x'):l)
+    _ -> reverse $ cirF y (reverse cir) ++ l

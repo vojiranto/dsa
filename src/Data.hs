@@ -48,19 +48,19 @@ createSt = St {
     f       = id
   }
 
-data Ceil = Ceil !Int !Int
+data Ceil = Ceil {-# UNPACK #-} !Int {-# UNPACK #-} !Int
   deriving (Eq, Ord, Show)
 
-data Ceil3 = Ceil3 !Ceil !Int
+data Ceil3 = Ceil3  {-# UNPACK #-} !Ceil  {-# UNPACK #-}  !Int
   deriving (Eq, Ord, Show)
 
-data Imagination = Imagination !Diameter ![Ceil]
+data Imagination = Imagination  {-# UNPACK #-}  !Diameter ![Ceil]
   deriving Eq
 
 -- Расслоение
 data Stratification = Stratification {
-    d1 :: !Diameter,
-    d2 :: !Diameter,
+    d1 ::  {-# UNPACK #-}  !Diameter,
+    d2 ::  {-# UNPACK #-}  !Diameter,
     imagination :: ![Ceil3]
   } deriving Eq
 
