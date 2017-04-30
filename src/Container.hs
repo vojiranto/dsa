@@ -5,6 +5,7 @@ import Data.Map     as M
 import Data.IntMap  as IM
 import Data.Vector  as V
 import Data.List    as L
+import Data.IntSet  as IS
 
 
 class Container a where
@@ -13,6 +14,15 @@ class Container a where
     empty :: a
     elems :: a -> [Elem a]
     null  :: a -> Bool
+
+
+instance Container IntSet where
+    type Elem IntSet = Int
+
+    empty = IS.empty
+    elems = IS.elems
+    null  = IS.null
+
 
 instance Ord a => Container (Map a b) where
     type Elem (Map a b) = b

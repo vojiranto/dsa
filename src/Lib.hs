@@ -1,4 +1,8 @@
-{-#Language ScopedTypeVariables, BangPatterns, MultiWayIf#-}
+{-# Language
+    GADTs,
+    ScopedTypeVariables,
+    BangPatterns,
+    MultiWayIf#-}
 module Lib (someFunc) where
 
 import Graphics.UI.Gtk hiding (Point)
@@ -68,27 +72,32 @@ someFunc = do
     drawing <- drawingAreaNew
 
     set window [
-        windowDefaultWidth := 900,
+        windowDefaultWidth  := 900,
         windowDefaultHeight := 600,
-        containerChild := hBox,
-        windowTitle := "DSA – Dinamic Sistem Analiser"]
+        containerChild      := hBox,
+        windowTitle         := "DSA – Dinamic Sistem Analiser"]
 
     -- TODO проблема несовпадения типов vBox и drawing
     setСontainers hBox [vBox]
     setСontainers hBox [drawing]
 
     setСontainers vBox hl
-    setLavelNew h0 "Введите формулы"
+    setLabelNew h0 "Введите формулы"
     extr h1 ar1 "x' = " "1 + y - 1.4 * pot(x, 2)"
     extr h2 ar2 "y' = " "0.3*x"
 
 
-    extr hx arX "x max = "  "1.5"
-    extr hy arY "y max = "  "1"
+    extr hx arX "x max = "          "1.5"
+    extr hy arY "y max = "          "1"
     extr h3 ar3 "Число итераций = " "7"
 
     [b1, b2] <- buttons h4 ["Образ", "Дополнительная итерация"]
-    [b3] <- buttons h5 ["Спектр морса"]
+    [b3]     <- buttons h5 ["Спектр Морса"]
+
+    -- поля для вывода крайних значний спектра Морса.
+    let stList = ["min: -- ", "max: -- "]
+    [sp1Min, sp1Max] <- forM stList (setLabelNew hs1)
+    [sp2Min, sp2Max] <- forM stList (setLabelNew hs2)
 
     -- Настраиваем упаковку аплетов
     boxSetChildPacking hBox vBox PackNatural 4 PackStart
@@ -100,18 +109,11 @@ someFunc = do
     let bg = color 1 1 1
     widgetModifyBg drawing StateNormal bg
 
+    -- Переиенные.
     r <- newIORef (1.5, 1)
     i <- newIORef $ Imagination 1 []
+
     onExpose drawing (renderScene drawing r i)
-
-    -- Обработчики ошибок
-    let catchRead :: Read a => String -> IO (Maybe a)
-        catchRead = cathF read
-
-        cathF :: (a -> b) -> a -> IO (Maybe b)
-        cathF f x = catch
-            (pure $! Just $! f $! x)
-            (\(_ :: SomeException) -> pure Nothing)
 
     -- Нажимаем на кнопку "Образ"
     onClicked b1 $ do
@@ -120,7 +122,6 @@ someFunc = do
 
         -- TODO Переработать обнаружение этой ошибки.
         !t <- cathF (\p -> Point (shift x' p) (shift y' p)) $ Point 0 0
-
         -- XXX Если использовать не список, и выставить аргументы
         --     в ином порядке, то перестанет ловить ошибки.
         l@[nInt, xMax, yMax] <- mapM catchRead [nInt, xMax, yMax]
@@ -170,31 +171,25 @@ someFunc = do
     widgetShowAll window
     mainGUI
 
+
 color r g b = Color
     (round $ 65535 * r)
     (round $ 65535 * g)
     (round $ 65535 * b)
 
 
-point :: String -> String -> Point
-point x y = Point (read x) (read y)
-
-
-point' :: String -> String -> Point
-point' x y = Point (-1*(read x)) (-1*(read y))
-
-
+-- Элементы  интерфейса.
 setСontainers a b = do
     set a $ (containerChild :=) <$> b
 
 
 extr hBox ar txt1 txt2 = do
-    setLavelNew hBox txt1
+    setLabelNew hBox txt1
     setСontainers hBox [ar]
     entrySetText  ar txt2
 
 
-setLavelNew bx lb = do
+setLabelNew bx lb = do
     l <- labelNewWithMnemonic lb
     setСontainers bx [l]
     return l
@@ -204,3 +199,15 @@ buttons h txt = forM txt $ \txt -> do
     b <- buttonNewWithLabel txt
     setСontainers h [b]
     return b
+
+
+-- Обработчики ошибок
+catchRead :: Read a => String -> IO (Maybe a)
+catchRead = cathF read
+
+
+cathF :: (a -> b) -> a -> IO (Maybe b)
+cathF f x = catch
+    (pure $! Just $! f $! x)
+    (\(_ :: SomeException) -> pure Nothing)
+

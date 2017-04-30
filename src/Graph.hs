@@ -1,231 +1,397 @@
 {-# Language
+    TupleSections,
+    RankNTypes,
     MultiWayIf,
-    ScopedTypeVariables,
-    TypeFamilies,
-    GADTs#-}
+    FlexibleContexts,
+    LambdaCase #-}
 module Graph where
 
-import Prelude     as P     hiding (null, lookup)
-import Data.Vector as V     hiding (null, empty, concatMap, zip)
-import Data.IntMap as IM    hiding (null, elems, empty)
-import Data.Map    as M     hiding (null, elems, empty)
-import Data.IntSet as IS    hiding (null, elems, empty)
-import Data.List   as L     hiding (null)
+import Data.Array.ST
+import Data.Array       as A
+import Data.IntMap      as IM
+import Data.Map         as M
+import Data.List        as L
+import Data.Maybe       as MB
+import Control.Monad
 import Data.Function
-import SymbolicImage
-
+import Data.Monoid
+import Data.STRef
+import Data.Set         as S
 import Data
-import Container
-
-data GraphA a where
-    GraphA :: Ord a => {
-        verges :: Vector (IntMap Double), -- множества ребер
-        apexes :: Map a Int               -- множество вершин
-    } -> GraphA a
-
-
--- Построение графа с обратной ориентацией рёбер.
-formGraphA' :: Ord a => [(a, a, Double)] -> GraphA a
-formGraphA' ls = formGraphA $ (\(c1, c2, d) -> (c2, c1, d)) <$> ls
-
-
--- Построение графа по списку рёбер.
-formGraphA :: forall a. Ord a => [(a, a, Double)] -> GraphA a
-formGraphA ls = GraphA verges apexes
-  where
-    verges :: Vector (IntMap Double)
-    verges = V.fromList $ vergeSet
-
-    apexes :: Map a Int
-    apexes = M.fromList $ zip apexList [0..]
-
-    apexList :: [a]
-    apexList = myNub $ concatMap (\(c1, c2, _) -> [c1, c2]) ls
-
-    vergeSet :: [IntMap Double]
-    vergeSet = fmap snd $ sortBy (compare`on`fst) $ set <$> vergeLists
-      where
-        set :: [(Int, Int, Double)] -> (Int, IntMap Double)
-        set ls = (a, IM.fromList $ (\(_, a, d) -> (a, d)) <$> ls)
-          where
-            {-#INLINE a#-}
-            a :: Int
-            a = (\(a, _, _) -> a) $ L.head ls
-
-    vergeLists :: [[(Int, Int, Double)]]
-    vergeLists = groupEq (\(a, _, _) -> a) $ transformVerge <$> ls
-
-    {-#INLINE indexOfApexe#-}
-    indexOfApexe :: a -> Int
-    indexOfApexe x = case x`M.lookup`apexes of
-        Just i -> i
-
-    {-#INLINE transformVerge#-}
-    transformVerge :: (a, a, Double) -> (Int, Int, Double)
-    transformVerge (a, b, d) = (indexOfApexe a, indexOfApexe b, d)
-
--- TODO
--- Переработать уменьшив число трансформаций между форматами!!!
-
-
--- см. стр. 111.
-formN :: GraphA a -> VergeA
-formN = IM.fromList.iToList.formN'
-  where
-    formN' :: GraphA a -> Vector (Int, Double)
-    formN' (GraphA v _) = L.minimumBy (compare`on`snd) <$>
-        IM.toList <$> v
-
-
-    iToList :: Vector a -> [(Int, a)]
-    iToList x = V.toList $ V.imap (\i a -> (i, a)) x
-
-
--- Для всех вершин, чей индекс входящих не равен нулю.
-formS :: GraphA a -> IntMap Int
-formS gr = IM.fromList $ zip (snd . L.head <$> s) (L.length <$> s)
-  where
-    s :: [[(Int, Int)]]
-    s = groupEq snd $ (\(a, (b, _)) -> (a, b)) <$>
-        (IM.toList $ formN gr)
-
-
-formS0 :: Ord a => GraphA a -> [Int]
-formS0 gr = IS.toList $ IS.difference
-    (IS.fromList $ elems gr)
-    (IS.fromList $ fst <$> (IM.toList $ formS gr))
-
-
-type ApexesI = IntMap Int
-type Verge  = (Int, Int)
-
-
--- Так как для каждой вершины существует только одна исходящая
--- дуга, то такое предатавление Ns допустимо.
-type VergeA = IntMap (Int, Double)
-type State = (
-    [Int],      -- список вершин, чья степень равна нулю.
-    ApexesI,   -- список вершин с степенянми не равными нулю.
-    VergeA      -- множество ребер.
-  )
-
-
-bazeContour :: Ord a => GraphA a -> [Verge]
-bazeContour gr = toVerges $ (L.minimumBy cntCmp $
-    tr $ until p f gr')
-  where
-    -- сравниваем два контура.
-    cntCmp :: VergeA -> VergeA -> Ordering
-    cntCmp = compare`on`zOfConter
-
-    toVerges :: VergeA -> [Verge]
-    toVerges x = (\(a,(b, c)) -> (a, b)) <$> IM.toList x
-
-    p :: State -> Bool
-    p (a, _, _) = null a
-
-    f :: F State
-    f (a, s, n) = (a', s', n')
-      where
-        a' :: [Int]
-        a' = if
-            | solv      -> j:L.tail a
-            | otherwise ->   L.tail a
-
-        s' :: ApexesI
-        s' = if
-            | solv      -> IM.delete             i s
-            | otherwise -> IM.adjust (\x -> x-1) i s
-
-        n' :: VergeA
-        n' = IM.delete i n
-
-        j :: Int
-        j = case i`IM.lookup`n of Just (j, _) -> j
-
-        solv :: Bool
-        solv = case j`IM.lookup`s of Just i -> i - 1 == 0
-
-        i :: Int
-        i = L.head a
-
-    gr' :: State
-    gr' = (formS0 gr, formS gr, formN gr)
-
-    -- разделение на контуры.
-    tr :: State -> [VergeA]
-    tr (_, _, v) = separation v
-      where
-        separation :: VergeA -> [VergeA]
-        separation v = if
-            | not.null $ v  -> ext:separation (IM.difference v ext)
-            | otherwise     -> empty
-          where
-            ext :: VergeA
-            ext = extract v
-
-            extract :: VergeA -> VergeA
-            extract v = IM.fromList $ st : go v (fst.snd $ st)
-              where
-                st :: (Int, (Int, Double))
-                st = IM.findMin v
-
-                go :: VergeA -> Int -> [(Int, (Int, Double))]
-                go v k = case k`IM.lookup`v of
-                    Just (i, d) -> (k, (i, d)) : go v i
-                    Nothing     -> empty
-
-
-groupEq :: Ord b => (a -> b) -> [a] -> [[a]]
-groupEq f = groupBy ((==)`on`f) . sortBy (compare`on`f)
-
-
-instance Ord a => Container (GraphA a) where
-    type Elem (GraphA a) = Int
-
-    empty = GraphA empty empty
-    elems (GraphA _ apexes)= elems apexes
-    null (GraphA _ apexes) = null apexes
-
-useFst f (a1 ,_ , _) (a2, _, _) = f a1 a2
-useFst2 f (a1, _) (a2, _) = f a1 a2
+import Control.Monad.ST
 
 -----------------------------------------------------------------
+-- Структуры
+-- 1. Дерево
+    -- array (1, n) Int Double [(Int, Double)]
+    -- root Int
+-- set
 
-toListOfV :: VergeA -> [Int]
-toListOfV v = fst <$> elems v
+-- дерево
+data Tree = Tree {
+    tree :: Graph2,         -- прямой граф связей.
+    root :: Int,            -- корень.
+    rev  :: Array Int Int   -- обратный граф связей.
+  }
+
+type Graph2 = Array Int (IntMap Double) -- граф
+type Circuit = [(Int,Int, Double)]              -- контур
 
 
-zOfConter :: VergeA -> Double
-zOfConter v = L.sum elemsOfV / toEnum (L.length elemsOfV)
+minBazeCircuit = bazeCircuit (compare`on`snd)
+maxBazeCircuit = bazeCircuit (\a b -> compare (snd b) (snd a))
+
+-- выбор базового контура.
+bazeCircuit :: ((Int, Double) -> (Int, Double) -> Ordering) -> Graph2 -> Circuit
+bazeCircuit cmp gr = minCircuit separation
+  where
+    -- Минимальное из исходящих рёбер.
+    min :: IntMap Double -> (Int, Double)
+    min = minimumBy cmp . IM.toList
+
+    -- число вершин
+    n :: Int
+    n = snd . bounds $ gr
+
+    -- рёбра с наименьшей степенью.
+    -- номер вершины начала, совпадает с индексом в списке.
+    -- индексы в списке отсчитываются начиная от 1.
+    minRibs :: [(Int, Double)]
+    minRibs = min <$> A.elems gr
+
+    ends :: Array Int Int
+    ends = listArray (1, n) $ fst <$> minRibs
+
+    -- подсчитываем степень вершин.
+    pots :: [(Int, Int)]
+    pots = (\a -> (fst $ head a, length a)) <$>
+        groupEq fst minRibs
+
+    -- список вершин с нулевой степенью.
+    listS0 :: [Int]
+    listS0 = S.toList $ S.difference
+        (S.fromList [1..n]) (S.fromList $ fst <$> pots)
+
+    -- выбор контура с минимальной характеристикой
+    minCircuit :: [Circuit] -> Circuit
+    minCircuit c = snd $ minimumBy (compare`on`fst) c'
+      where
+        -- модифицируем список, чтобы сократить повторные расчёты.
+        c' :: [(Double, Circuit)]
+        c' = (\x -> (zOfCircuit x, x)) <$> c
+
+    -- вершины траекторий, среди которых есть базовый контур.
+    stDo :: [Int]
+    stDo = IM.keys $ runST $ do
+        -- вершины со степенью ноль.
+        s0 <- newSTRef listS0
+        -- вершины с не нулевой степенью.
+        sp <- newSTRef $ IM.fromList pots
+        let go = do
+                list <- readSTRef s0
+                if L.null list then readSTRef sp
+                else do
+                    modifySTRef s0 tail
+                    let hl = head list
+                        e  = ends A.! hl
+                    modifySTRef sp (IM.delete hl)
+                    modifySTRef sp (IM.update upd e)
+                    t <- readSTRef sp
+                    when (Nothing == e`IM.lookup`t) $
+                        modifySTRef s0 (e:)
+                    go
+
+            upd :: Int -> Maybe Int
+            upd x = if x > 0 then Just $ x - 1 else Nothing
+        go
+        readSTRef sp
+
+    ribs :: IntMap (Int, Double)
+    ribs = IM.intersection
+        (IM.fromList $ zip [1..] minRibs)
+        (IM.fromList $ (,"") <$> stDo)
+
+    separation :: [Circuit]
+    separation = go ribs
+      where
+        go :: IntMap (Int, Double) -> [Circuit]
+        go x = if
+            | Prelude.null x -> []
+            | otherwise -> circuit : go (IM.difference x cir)
+          where
+            cir :: IntMap (Int, Double)
+            cir = IM.fromList $ (\(a,b,c) -> (a, (b, c))) <$> circuit
+
+            -- контур
+            circuit :: Circuit
+            circuit = stape st
+
+            -- точка отсёта траекторий
+            st :: Int
+            st = fst.head $ IM.toList x
+
+            -- перебираем по шагам
+            stape :: Int -> Circuit
+            stape a = case a`IM.lookup`x of
+                Just (i, d) | i /= st -> (a, i, d):stape i
+                _                     -> []
+
+-- размыкание контура путём удаления одного ребра.
+unlock :: F Circuit
+unlock = tail
+
+
+-- строим граф.
+formGraph :: [(Ceil3, [(Ceil3, Double)])] -> Graph2
+formGraph gr = array (1, n) ribs
+  where
+    -- число вершин.
+    n :: Int
+    n = length $ setOfC
+
+    -- множество вершин.
+    setOfC :: Set Ceil3
+    setOfC = S.fromList $ fst <$> gr
+
+    -- список определяющий соответсвия.
+    listOfC :: Map Ceil3 Int
+    listOfC = M.fromList $ zip (S.toList setOfC) [1..]
+
+    -- Меняем Ceil -> Int
+    intForm :: [(Int, [(Int, Double)])]
+    intForm = (\(a, b) -> (toInt a, MB.mapMaybe toInt' b)) <$> gr
+      where
+        -- первичные ключи существуют все.
+        toInt :: Ceil3 -> Int
+        toInt  x = case x`M.lookup`listOfC of
+            Just i  -> i
+
+        -- вторичные ключи могут вести за пределы графа.
+        toInt' :: (Ceil3, Double) -> Maybe (Int, Double)
+        toInt' (x, d) = case x`M.lookup`listOfC of
+            Just i  -> Just (i, d)
+            Nothing -> Nothing
+
+    -- список рёбер
+    ribs :: [(Int, IntMap Double)]
+    ribs = (\(x, y) -> (x, IM.fromList y)) <$> intForm
+
+
+-- сгруппировать эквивалентные по признаку.
+groupEq :: Ord b => (a -> b) -> [a] -> [[a]]
+groupEq f = groupBy ((==)`on`f) . sortBy (compare`on`f)
+-----------------------------------------------------------------
+--                 Построение оптимального контура             --
+-----------------------------------------------------------------
+-- потенциалы
+-- v e(j) − v b(j) = c j − z
+-- v e = c j - z - v b
+pots :: Circuit -> [(Int, Double)]
+pots c = pots'
+  where
+    -- считаем потенциалы вершин на контуре.
+    pots' :: [(Int, Double)]
+    pots' = (headOfCircuit c, 0) : do
+        ((_,e,d), (_, b)) <- zip (init c) pots'
+        return (e, d - zOfCircuit c - b)
+
+formTree :: Graph2 -> Circuit -> ST s0
+    (STArray s0 Int (Set Int), -- tree
+     STArray s0 Int Int,             -- reverse tree
+     Int)                            -- root of tree
+formTree gr cir = do
+    tree <- newArray (bounds gr) S.empty ::
+        ST s (STArray s Int (Set Int))
+    rev  <- newArray (bounds gr) 0 ::
+        ST s (STArray s Int Int)
+    forM_ (init cir) $ \(a, b, d) -> do
+        writeArray tree a (S.singleton b)
+        writeArray rev b a
+    return (tree, rev, headOfCircuit cir)
+
+
+headOfCircuit :: Circuit -> Int
+headOfCircuit c = fst3 $ head c
+
+
+-- характеристика контура.
+zOfCircuit :: Circuit -> Double
+zOfCircuit v = sum elemsOfV / toEnum (length v)
   where
     elemsOfV :: [Double]
-    elemsOfV = snd <$> elems v
+    elemsOfV = (\(_,_,a) -> a) <$> v
 
 
--- (1) стр. 110.
-pots :: VergeA -> [(Int, Double)]
-pots v = go start 0 v
-  where
-    start :: Int
-    start = L.head $ IM.keys v
+-- модификация элемента.
+modifyArray :: (MArray array elem m, Ix index) =>
+    array index elem -> index -> (elem -> elem) -> m ()
+modifyArray a i f = do
+    e <- readArray a i
+    writeArray a i (f e)
 
-    go :: Int ->  Double -> VergeA -> [(Int, Double)]
-    go i d v = if
-        | Just (int, dou) <- i' -> let
-                d' = dou + d - z
-            in (i, d) : go int d' v'
-        | otherwise      -> []
-      where
-        v' :: VergeA
-        v' = IM.delete i v
 
-        i' :: Maybe (Int, Double)
-        i' = i `IM.lookup` v
+minOptZ gr = optZ (<=) gr (minBazeCircuit gr)
+maxOptZ gr = optZ (>=) gr (maxBazeCircuit gr)
 
-    z :: Double
-    z = zOfConter v
 
--- (2) стр. 110
-startM1 :: VergeA -> [Int]
-startM1 v = fst <$> pots v
+optZ cmp gr cir = do
+    -- п.2.
+    let (_, n) = bounds gr
+        setM1  = S.fromList $ fst3 <$> cir
+    m2  <- newSTRef $ S.difference (S.fromList [1..n]) setM1
+    m1  <- newSTRef $ fromCir cir
+    m0  <- newSTRef $ S.empty
+    (tree, rev, root) <- formTree gr cir
+    -- храним множество потенциалов.
+    potSet <- newSTRef $ IM.fromList $ pots cir
+    let z = zOfCircuit cir
+        cycleA = do
+            m1' <- readSTRef m1
+            -- если список не пуст, делать.
+            if isEmpty m1' then do
+               -- (a)
+                let (x, xs) = headTail m1'
+                writeSTRef  m1 xs
+                modifySTRef m0 (S.insert x)
+
+                -- (b)
+                potSet' <- readSTRef potSet
+                let vi1 = v x potSet'
+                    cycleB (y:ys) = do
+                        let w = vi1 + cOf gr x y - z
+                        m2'  <- readSTRef m2
+                        isPr <- prev rev y x
+                        if  | y`S.member`m2' -> do
+                                modifySTRef m1 (snoc y)
+                                modifySTRef m2 (S.delete y)
+                                modifySTRef potSet (IM.insert y w)
+                                modifyArray tree x (S.insert y)
+                                writeArray rev y x
+                                cycleB ys
+                            | cmp w (v y potSet') -> cycleA
+                            | isPr || preceded y cir -> do
+                                cir' <- newCircuit gr rev cir x y []
+                                optZ cmp gr cir'
+                            | otherwise -> do
+                                modifySTRef potSet (IM.insert y w)
+                                x' <- readArray rev y
+                                modifyArray tree x' (S.delete y)
+                                writeArray rev y x
+                                m0' <- readSTRef m0
+                                when (y`S.member`m0') $ do
+                                    modifySTRef m0 (S.delete y)
+                                    modifySTRef m1 (cons y)
+                                cycleA
+                    cycleB [] = cycleA
+                cycleB (fst <$> (IM.toList $ gr A.! x))
+            else return z
+    cycleA
+
+
+-- находим предшествует ли элемент другому в дереве.
+prev :: MArray a Int m => a Int Int -> Int -> Int -> m Bool
+prev rev y x = do
+    x' <- readArray rev x
+    if  | x' == 0   -> return False
+        | x' == y   -> return True
+        | otherwise -> prev rev y x'
+
+
+-- достраиваем от конца контура, до нужного элемента
+-- XXX CirF принимает контур в обратном порядке, и возвращает
+--     кусок контура тоже в обратном порядке.
+cirF :: Int -> F Circuit
+cirF y = \case
+    (a,b,d):cir | b == y    -> [(a,b,d)]
+                | otherwise -> (a,b,d):cirF y cir
+    _                       -> []
+
+
+v :: Int -> IntMap Double -> Double
+v x p = fromJust $ x`IM.lookup`p
+
+
+cOf :: Graph2 -> Int -> Int -> Double
+cOf gr a b = fromJust $ b`IM.lookup`(gr A.! a)
+
+
+preceded :: Int -> Circuit -> Bool
+preceded a cir = elem a $ fst3 <$> cir
+
+
+-- на основе контура строим двунаправленный список вершин.
+fromCir :: Circuit -> DList Int
+fromCir cir = toDList $ fst3 <$> cir
+
+
+-- выделяем новый контур из графа
+newCircuit :: MArray a Int m =>
+    Graph2 -> a Int Int -> Circuit -> Int -> Int -> Circuit ->
+    m Circuit
+newCircuit gr rev cir y x l = do
+    x' <- readArray rev x
+    if  | x' == 0 -> return (reverse $ cirF y (reverse cir) ++ l)
+        | x' == y -> return (reverse $ (x, x', cOf gr x x'):l)
+        | otherwise -> newCircuit
+            gr rev cir y x' ((x, x', cOf gr x x'):l)
+
+
+fst3 (a, _, _) = a
+
+-----------------------------------------------------------------
+--                  Двунаправленный список                     --
+-----------------------------------------------------------------
+-- список с возможностью добавлять в начало и конец.
+data DList a = DList [a] [a]
+
+
+toDList :: [a] -> DList a
+toDList a = DList a []
+
+
+-- Добавляем элемент в начало списка.
+cons :: a -> DList a -> DList a
+cons a (DList x y) = DList (a:x) y
+
+
+-- Добавляем элемент в конец списка.
+snoc :: a -> DList a -> DList a
+snoc a (DList x y) = DList x (a:y)
+
+
+-- Приводим список к нормальной форме.
+toNorm :: F (DList a)
+toNorm (DList x y) = DList (x <> reverse y) []
+
+
+-- находим голову и хвост списка.
+headTail :: DList a -> (a, DList a)
+headTail (DList x y) = if
+    | s:sl <- x -> (s, DList sl y)
+    | otherwise -> (head y', DList (tail y') [])
+  where y' = reverse y
+
+
+-- находим последний элемент и всё без него.
+lastInit :: DList a -> (a, DList a)
+lastInit (DList x y) = if
+    | s:sl <- y -> (s, DList x sl)
+    | otherwise -> (head x', DList [] (tail x'))
+  where x' = reverse x
+
+
+-- переворачиваем список.
+reverseDList :: F (DList a)
+reverseDList (DList x y) = DList y x
+
+
+-- проверка на пустоту
+isEmpty :: Query (DList a)
+isEmpty (DList x y) = L.null x && L.null y
+
+
+emptyList :: DList a
+emptyList = DList [] []
+
+instance Functor DList where
+    fmap f (DList x y) = DList (fmap f x) (fmap f y)

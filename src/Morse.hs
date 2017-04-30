@@ -1,7 +1,13 @@
 module Morse where
 
-import Data.Graph
+import Data.List (maximumBy)
+import Data.Function (on)
 
-import Data
-import Stratification
+-- находим самое длинное слово.
+myMax :: [String] -> String
+myMax = maximumBy (compare`on`length)
 
+-- считываем, обрабатываем и печатаем результат.
+test = do
+    s <- readLn
+    putStrLn . myMax . words $ s
