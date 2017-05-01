@@ -41,12 +41,12 @@ type Circuit = [(Int,Int, Double)]              -- контур
 
 
 minBazeCircuit, maxBazeCircuit :: Graph2 -> Circuit
-minBazeCircuit = bazeCircuit (compare`on`snd)
-maxBazeCircuit = bazeCircuit (\a b -> compare (snd b) (snd a))
+minBazeCircuit = bazeCircuit minCircuit (compare`on`snd)
+maxBazeCircuit = bazeCircuit maxCircuit (\a b -> compare (snd b) (snd a))
 
 -- выбор базового контура.
-bazeCircuit :: ((Int, Double) -> (Int, Double) -> Ordering) -> Graph2 -> Circuit
-bazeCircuit cmp gr = minCircuit separation
+bazeCircuit :: ([Circuit] -> Circuit)-> OrdF (Int, Double) -> Graph2 -> Circuit
+bazeCircuit elect cmp gr = elect $ separation ribs
   where
     -- Минимальное из исходящих рёбер.
     min :: IntMap Double -> (Int, Double)
@@ -75,14 +75,6 @@ bazeCircuit cmp gr = minCircuit separation
     !listS0 = S.toList $ S.difference
         (S.fromList [1..n]) (S.fromList $! fst <$!> pots)
 
-    -- выбор контура с минимальной характеристикой
-    minCircuit :: [Circuit] -> Circuit
-    minCircuit !c = snd $! minimumBy (compare`on`fst) c'
-      where
-        -- модифицируем список, чтобы сократить повторные расчёты.
-        c' :: [(Double, Circuit)]
-        !c' = (\x -> (zOfCircuit x, x)) <$!> c
-
     -- вершины траекторий, среди которых есть базовый контур.
     stDo :: [Int]
     stDo = IM.keys $
@@ -94,7 +86,7 @@ bazeCircuit cmp gr = minCircuit separation
                     !sp'  = IM.delete hl sp
                     !sp'' = IM.update upd e sp'
                     !s0'' = if Nothing == e`IM.lookup`sp''
-                            then e:s0 else s0
+                            then e:s0' else s0'
                 in go s0'' sp'
 
             upd :: Int -> Maybe Int
@@ -106,30 +98,43 @@ bazeCircuit cmp gr = minCircuit separation
         (IM.fromList $! zip [1..] minRibs)
         (IM.fromList $! (,"") <$!> stDo)
 
-    separation :: [Circuit]
-    !separation = go ribs
-      where
-        go :: IntMap (Int, Double) -> [Circuit]
-        go !x = if
-            | Prelude.null x -> []
-            | otherwise -> circuit : go (IM.difference x cir)
-          where
-            cir :: IntMap (Int, Double)
-            !cir = IM.fromList $! (\(a,b,c) -> (a, (b, c))) <$!> circuit
 
-            -- контур
-            circuit :: Circuit
-            !circuit = stape st
+-- выбор контура с минимальной характеристикой
+minCircuit, maxCircuit :: [Circuit] -> Circuit
+minCircuit = electCircuit (compare`on`snd)
+maxCircuit = electCircuit (\a b -> compare (snd b) (snd a))
 
-            -- точка отсёта траекторий
-            st :: Int
-            !st = fst.head $! IM.toList x
 
-            -- перебираем по шагам
-            stape :: Int -> Circuit
-            stape !a = case a`IM.lookup`x of
-                Just (!i, !d) | i /= st -> (a, i, d):stape i
-                _                       -> []
+electCircuit :: OrdF (Circuit, Double) -> [Circuit] -> Circuit
+electCircuit cmp !c = fst $! minimumBy cmp c'
+  where
+    -- модифицируем список, чтобы сократить повторные расчёты.
+    c' :: [(Circuit, Double)]
+    !c' = (\x -> (x, zOfCircuit x)) <$!> c
+
+
+-- разделение на множество контуров.
+separation :: IntMap (Int, Double) -> [Circuit]
+separation !x = if
+    | Prelude.null x -> []
+    | otherwise -> circuit : separation (IM.difference x cir)
+  where
+    cir :: IntMap (Int, Double)
+    !cir = IM.fromList $! (\(a,b,c) -> (a, (b, c))) <$!> circuit
+
+    -- контур
+    circuit :: Circuit
+    !circuit = stape st
+
+    -- точка отсёта траекторий
+    st :: Int
+    !st = fst.head $! IM.toList x
+
+    -- перебираем по шагам
+    stape :: Int -> Circuit
+    stape !a = case a`IM.lookup`x of
+        Just (!i, !d) | i /= st -> (a, i, d):stape i
+        _                       -> []
 
 -- размыкание контура путём удаления одного ребра.
 unlock :: F Circuit

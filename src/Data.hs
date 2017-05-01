@@ -48,6 +48,8 @@ createSt = St {
     f       = id
   }
 
+type OrdF a = a -> a -> Ordering
+
 data Ceil = Ceil {-# UNPACK #-} !Int {-# UNPACK #-} !Int
   deriving (Eq, Ord, Show)
 

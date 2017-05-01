@@ -22,7 +22,7 @@ morse fp im i = mrsElem <$> cyc
     cyc = cyclics g
 
     mrsElem :: [(Ceil3, [(Ceil3, Double)])] -> Int
-    mrsElem a = (length.A.elems $ gr)
+    mrsElem a = (length $ minBazeCircuit gr)
         where gr = formGraph a
 
     (Stratification d1 d2 ls) = str fp im i
