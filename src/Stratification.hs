@@ -34,29 +34,21 @@ celling (Ceil3 c i) = [Ceil3 c (i*2), Ceil3 c (i*2-1)]
 
 
 shiftCeil :: Diameter -> Diameter -> F Point -> Ceil3 -> [Ceil3]
-shiftCeil d1 d2 fp (Ceil3 c l) = myNub $ Ceil3 p' . (\i ->
-    fromRad d2 $ arc $ signum $ toPoint $
-    jacobian * e i) <$> list
+shiftCeil d1 d2 fp (Ceil3 c l) = myNub $ do
+    let t = toRad d2 l
+        Point x y = fromCeil d1 c
+        x' = x - d1
+        y' = y - d1
+        d1' = d1/4
+    t' <- [t-d2, t-d2+d2/16..t]
+    x' <- [x', x'+d1'..x]
+    y' <- [y', y'+d1'..y]
+    let p = Point x' y'
+    return $ Ceil3 (toCeil d1 $ fp p)
+        (fromRad d2 $ arc $ signum $ toPoint $ jacobian p * e t')
   where
-    p' :: Ceil
-    p' = toCeil d1 $ fp ceilCenter
-
-    list :: [Double]
-    list = do
-        let t = toRad d2 l
-        x <- [t-d2, t-d2+d2/16..t]
-        return x
-    -- минус d/2 из-за особенностей отображения точек в номера
-    -- ячеек.
-    -- (fromCeil 1 $ Ceil 1 1)    == Point 1.0 1.0
-    -- (toCeil 1 $ Point 0.4 0.4) == Ceil 1 1
-    ceilCenter :: Point
-    ceilCenter = Point (x-d1/2) (y-d1/2)
-
-    Point x y = fromCeil d1 c
-
-    jacobian :: Matrix Double
-    jacobian = jac fp ceilCenter
+    jacobian :: Point -> Matrix Double
+    jacobian p = jac fp p
 
     arc :: Point -> Double
     arc (Point x y) = if

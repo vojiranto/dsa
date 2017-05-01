@@ -63,7 +63,7 @@ bazeCircuit cmp gr = minCircuit separation
     !minRibs = min <$!> A.elems gr
 
     ends :: Array Int Int
-    !ends = listArray (1, n) $ fst <$> minRibs
+    !ends = listArray (1, n) $! fst <$> minRibs
 
     -- подсчитываем степень вершин.
     pots :: [(Int, Int)]
@@ -77,7 +77,7 @@ bazeCircuit cmp gr = minCircuit separation
 
     -- выбор контура с минимальной характеристикой
     minCircuit :: [Circuit] -> Circuit
-    minCircuit !c = snd $ minimumBy (compare`on`fst) c'
+    minCircuit !c = snd $! minimumBy (compare`on`fst) c'
       where
         -- модифицируем список, чтобы сократить повторные расчёты.
         c' :: [(Double, Circuit)]
@@ -85,28 +85,21 @@ bazeCircuit cmp gr = minCircuit separation
 
     -- вершины траекторий, среди которых есть базовый контур.
     stDo :: [Int]
-    stDo = IM.keys $! runST $ do
+    stDo = IM.keys $
         -- вершины со степенью ноль.
-        s0 <- newSTRef listS0
-        -- вершины с не нулевой степенью.
-        sp <- newSTRef $! IM.fromList pots
-        let go s0 = do
-                list <- readSTRef s0
-                if L.null list then readSTRef sp
-                else do
-                    modifySTRef s0 tail
-                    let hl = head list
-                        e  = ends A.! hl
-                    modifySTRef sp (IM.delete hl)
-                    modifySTRef sp (IM.update upd e)
-                    t <- readSTRef sp
-                    when (Nothing == e`IM.lookup`t) $
-                        modifySTRef s0 (e:)
-                    go
+        let go !s0 !sp = if L.null s0 then sp
+                else
+                let (hl:s0') = s0
+                    !e    = ends A.! hl
+                    !sp'  = IM.delete hl sp
+                    !sp'' = IM.update upd e sp'
+                    !s0'' = if Nothing == e`IM.lookup`sp''
+                            then e:s0 else s0
+                in go s0'' sp'
 
             upd :: Int -> Maybe Int
             upd !x = if x > 0 then Just $! x - 1 else Nothing
-        go
+        in go (listS0) (IM.fromList pots)
 
     ribs :: IntMap (Int, Double)
     !ribs = IM.intersection
