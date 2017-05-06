@@ -23,8 +23,8 @@ morse fp im i = mrsElem <$> cyclics
   where
     mrsElem :: [(Ceil3, [(Ceil3, Double)])] -> (Double, Double)
     mrsElem a = (
-                     minOptZ gr  (minBazeCircuit gr),
-            negate $ minOptZ gr' (minBazeCircuit gr'))
+                     minOptZ gr  (maxBazeCircuit gr),
+            negate $ minOptZ gr' (maxBazeCircuit gr'))
         where
             gr  = formGraph                    a
             gr' = formGraph $ modifyIns negate a

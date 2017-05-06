@@ -160,13 +160,11 @@ separation !x = if
         Nothing                   -> error "Контур не замкнут!!!"
 
 
--- размыкание контура путём удаления одного ребра.
-unlock :: F Circuit
-unlock = tail
+
 
 
 -- строим граф.
-formGraph :: [(Ceil3, [(Ceil3, Double)])] -> Graph2
+formGraph ::forall a . Ord a => [(a, [(a, Double)])] -> Graph2
 formGraph gr = array (1, n) ribs
   where
     -- число вершин.
@@ -174,11 +172,11 @@ formGraph gr = array (1, n) ribs
     n = length $ setOfC
 
     -- множество вершин.
-    setOfC :: Set Ceil3
+    setOfC :: Ord a => Set a
     setOfC = S.fromList $! fst <$!> gr
 
     -- список определяющий соответсвия.
-    listOfC :: Map Ceil3 Int
+    listOfC :: Ord a => Map a Int
     listOfC = M.fromList $! zip (S.toList setOfC) [1..]
 
     -- Меняем Ceil -> Int
@@ -186,12 +184,12 @@ formGraph gr = array (1, n) ribs
     intForm = (\(a, b) -> (toInt a, MB.mapMaybe toInt' b)) <$!> gr
       where
         -- первичные ключи существуют все.
-        toInt :: Ceil3 -> Int
+        toInt :: Ord a => a -> Int
         toInt  x = case x`M.lookup`listOfC of
             Just i  -> i
 
         -- вторичные ключи могут вести за пределы графа.
-        toInt' :: (Ceil3, Double) -> Maybe (Int, Double)
+        toInt' :: Ord a => (a, Double) -> Maybe (Int, Double)
         toInt' (x, d) = case x`M.lookup`listOfC of
             Just i  -> Just (i, d)
             Nothing -> Nothing
@@ -207,22 +205,6 @@ groupEq f = groupBy ((==)`on`f) . sortBy (compare`on`f)
 -----------------------------------------------------------------
 --                 Построение оптимального контура             --
 -----------------------------------------------------------------
-formTree :: Graph2 -> Circuit -> ST s0
-    (STArray s0 Int (Set Int), -- tree
-     STArray s0 Int Int,             -- reverse tree
-     Int)                            -- root of tree
-formTree gr cir = do
-    tree <- newArray (bounds gr) S.empty ::
-        ST s (STArray s Int (Set Int))
-    rev  <- newArray (bounds gr) 0 ::
-        ST s (STArray s Int Int)
-    forM_ (init cir) $ \(a, b, d) -> do
-        writeArray tree a (S.singleton b)
-        writeArray rev b a
-    return (tree, rev, headOfCircuit cir)
-
-
-
 -- модификация элемента.
 modifyArray :: (MArray array elem m, Ix index) =>
     array index elem -> index -> (elem -> elem) -> m ()
@@ -310,13 +292,12 @@ optZ' gr cir = let
     -- NOTE все вершины из mc уже в m1 => их нужно вычесть из m2.
     m2 <- newSTRef $ S.difference (S.fromList [1..n]) smc
     p  <- newSTRef $ IM.fromList p
-    count <- newSTRef 1
+    st <- newSTRef S.empty
     -- (7)
     let loop2 = do
-            coun <- readSTRef count
             m1' <- readSTRef m1
             -- Если not null m1 =>
-            if (not.isEmpty $ m1') && coun < 1000 then do
+            if (not.isEmpty $ m1') then do
                 -- (a)
                 let (i1, m1'') = headTail m1'
                 writeSTRef m1 m1''
@@ -340,6 +321,7 @@ optZ' gr cir = let
                         m2'      <- readSTRef m2
                         m0'      <- readSTRef m0
                         prec     <- preceded i2 i1 tree smc
+                        st' <- readSTRef st
                         if  | i2 `S.member`m2' -> do
                                 -- добавить посчитанный потенциал.
                                 modifySTRef p (IM.insert i2 w)
@@ -365,7 +347,11 @@ optZ' gr cir = let
                                 loop1 cir'
                                 --else return z
                             -- (***.2)
+                            | j`S.member`st' -> loop3 i2s
                             | otherwise -> do
+                                -- ведём учёт вершин, по которым
+                                -- вели пересчёт.
+                                modifySTRef st (S.insert j)
                                 -- вставляем пересчтанный потенциал.
                                 -- NOTE этот пункт пропущен у
                                 --      Петренко (sic!).
@@ -384,7 +370,6 @@ optZ' gr cir = let
                                 -- переносим i2 в начло m1
                                 modifySTRef m1 (lDelete i2)
                                 modifySTRef m1 (cons i2)
-                                modifySTRef count (+1)
                                 loop3 i2s
                     loop3 _  = do
                         loop2
@@ -395,7 +380,7 @@ optZ' gr cir = let
   in loop1 cir
 
 printF a = return $! unsafePerformIO $! print a
-
+-- предшествует ли вершина i1 вершине i2?
 -- NOTE Если существует контур, то i2 должна лежать на нём.
 --      иначе forever loop
 preceded :: forall m arr. MArray arr Int m =>
@@ -425,7 +410,7 @@ isPrecedFor i1 i2 tree = do
     pr <- readArray tree i2
     return $ i2 == pr
 
--- предшествует ли вершина i1 вершине i2?
+
 -- выделяем контур.
 -- NOTE (1!) Контур должен быть.
 --      (2!) i2 должна лежать на котуре.
@@ -447,45 +432,6 @@ isPrecedFor i1 i2 tree = do
     takeC _ = error "takeC !!!"
 
     rev f a = reverse . f . reverse $ a
-
--- (1, 2) (2, 3) (3, 4) ...
-
-
------------------------------------------------------------------  TODO
---                                                             --  TODO
------------------------------------------------------------------  TODO
-
--- находим предшествует ли элемент другому в дереве.
-prev :: MArray a Int m => a Int Int -> Int -> Int -> m Bool
-prev rev y x = do
-    x' <- readArray rev x
-    if  | x' == 0   -> return False
-        | x' == y   -> return True
-        | otherwise -> prev rev y x'
-
-
--- достраиваем от конца контура, до нужного элемента
--- FIXME CirF принимает контур в обратном порядке, и возвращает
---     кусок контура тоже в обратном порядке.
-cirF :: Int -> F Circuit
-cirF y = \case
-    (a,b,d):cir | b == y    -> [(a,b,d)]
-                | otherwise -> (a,b,d):cirF y cir
-    _                       -> []
-
-
-
--- выделяем новый контур из графа
-newCircuit :: MArray a Int m =>
-    Graph2 -> a Int Int -> Circuit -> Int -> Int -> Circuit ->
-    m Circuit
-newCircuit gr rev cir y x l = do
-    x' <- readArray rev x
-    if  | x' == 0 -> return (reverse $ cirF y (reverse cir) ++ l)
-        | x' == y -> return (reverse $ (x, x', cOf gr x x'):l)
-        | otherwise -> newCircuit
-            gr rev cir y x' ((x, x', cOf gr x x'):l)
-
 
 
 -----------------------------------------------------------------
@@ -551,28 +497,3 @@ emptyList = DList [] []
 instance Functor DList where
     fmap f (DList x y) = DList (fmap f x) (fmap f y)
 
------------------------------------------------------------------
------------------------------------------------------------------
-
-
-formTree' :: Circuit -> (IntMap (IntMap Double), IntMap Int, Int)
-formTree' cir = (
-    IM.fromList $ (\(a, b, d) -> (a, IM.singleton b d)) <$> icir,
-    IM.fromList $ (\(a, b, _) -> (b, a)) <$> icir,
-    headOfCircuit cir)
-  where icir = init cir
-
-
-prev' :: IntMap Int -> Int -> Int -> Bool
-prev' rev y x = case x`IM.lookup`rev of
-    Just x' | x' == y   -> True
-            | otherwise -> prev' rev y x'
-    _                   -> False
-
-
-newCircuit' :: Graph2 -> IntMap Int -> Circuit -> Int -> Int -> Circuit -> Circuit
-newCircuit' gr rev cir y x l = case x`IM.lookup`rev of
-    Just x' | x' == y   -> reverse $ (x, x', cOf gr x x'):l
-            | otherwise -> newCircuit'
-                gr rev cir y x' ((x, x', cOf gr x x'):l)
-    _ -> reverse $ cirF y (reverse cir) ++ l
