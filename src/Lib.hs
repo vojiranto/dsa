@@ -56,6 +56,7 @@ renderScene d lims p ev = do
 
     forM_ [-yMax..yMax] $ \i -> do
         drawLine' (0.1, i) (-0.1, i)
+
     let pTr (Point x y) = tr (x, y)
     drawPoints dw gc $ pTr.fromCeil d' <$> p
     return True
@@ -84,12 +85,12 @@ someFunc = do
 
     setСontainers vBox hl
     setLabelNew h0 "Введите формулы"
-    extr h1 ar1 "x' = " "1 + y - 1.4 * pot(x, 2)"
-    extr h2 ar2 "y' = " "0.3*x"
+    extr h1 ar1 "x' = " "1 + 0.3*y - 1.4 * pot(x, 2)"
+    extr h2 ar2 "y' = " "x"
 
 
-    extr hx arX "x max = "          "1.5"
-    extr hy arY "y max = "          "1"
+    extr hx arX "x max = "          "2"
+    extr hy arY "y max = "          "2"
     extr h3 ar3 "Число итераций = " "7"
 
     [b1, b2] <- buttons h4 ["Образ", "Дополнительная итерация"]
@@ -177,7 +178,7 @@ someFunc = do
         when (isJust t) $ do
             let f p       = Point (shift x' p) (shift y' p)
             -- вычисление спектра морса
-            print $ morse f im 0
+            print $ morse f im 4
             return ()
         widgetShowAll window
 

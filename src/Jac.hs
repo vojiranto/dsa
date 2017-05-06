@@ -3,10 +3,7 @@
     FlexibleInstances,
     NumDecimals #-}
 
-module Jac (
-    jac,
-    e,
-    ) where
+module Jac where
 
 import Data.Matrix (Matrix(..), fromLists, fromList, toList)
 
@@ -33,6 +30,15 @@ jac f p@(Point x' y') = fromLists [
     [diff (\a -> f2 p{x = a}) x', diff (\a -> f2 p{y = a}) y']]
   where
     f1 = x.f ; f2 = y.f
+
+jac' :: F Point -> Point -> Double
+jac' f p@(Point x' y') = log $ abs $
+    (diff (\a -> f1 p{x = a}) x')*(diff (\a -> f2 p{y = a}) y')
+  - (diff (\a -> f1 p{y = a}) y')*(diff (\a -> f2 p{x = a}) x')
+  where
+    f1 = x.f ; f2 = y.f
+
+
 
 -- единичный вектор.
 e :: Double -> Matrix Double

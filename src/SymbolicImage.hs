@@ -8,7 +8,9 @@ module SymbolicImage (
     toRad,
     myNub,
     fromCeil,
-    toCeil
+    toCeil,
+    mySequence,
+    (#=)
     ) where
 
 import Data.Graph
@@ -44,8 +46,8 @@ stepImagination' fp (Imagination d c) = Imagination (d/2) $!
     cyclics $! parMap rseq
         (shiftCeil 4 (d/2) fp #=)
         (celling d c)
-  where
-    (#=) !f !c = (c, c, f c)
+
+(#=) !f !c = (c, c, f c)
 
 
 -- Получение по точке номера ячейки в которой она
@@ -78,18 +80,10 @@ toRad d x = d * fromIntegral x
 
 
 -- По ячейке и уровнениям формируем её образ.
-shiftCeil :: Double -> Diameter -> F Point ->
-    Ceil -> [Ceil]
-shiftCeil k d fp p = myNub $ parMap rseq
-    (\p -> toCeil d $ fp p) $
-  do
+shiftCeil :: Double -> Diameter -> F Point -> Ceil -> [Ceil]
+shiftCeil k d fp p = myNub $ parMap rseq (toCeil d.fp) $ do
     let Point x y = fromCeil d p
-        x' = x-d
-        y' = y-d
-        d' = d/k
-    x' <- [x', x'+d'..x]
-    y' <- [y', y'+d'..y]
-    return $ Point x' y'
+    return Point <*> (mySequence x d) <*> (mySequence y d)
 
 
 bazeImagination :: Space -> Imagination
@@ -121,6 +115,11 @@ celling !d = concatMap $! \c -> do
 {-# INLINE myNub #-}
 myNub :: Ord a => F [a]
 myNub x = Set.toList . Set.fromList $! x
+
+mySequence :: Double -> Double -> [Double]
+mySequence t d = do
+    d' <- (d*) <$> [-0.25, 0..1.25]
+    return $ t - d'
 
 
 -- определяем кол-во ячеек.

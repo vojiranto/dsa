@@ -49,6 +49,7 @@ createSt = St {
   }
 
 type OrdF a = a -> a -> Ordering
+type Elect a = [a] -> a
 
 data Ceil = Ceil {-# UNPACK #-} !Int {-# UNPACK #-} !Int
   deriving (Eq, Ord, Show)
