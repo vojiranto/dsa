@@ -13,6 +13,7 @@ import Data.Function
 import Data.List as L
 import Data.Map as M
 import Data.IntMap as IM
+import Data.Complex
 import Data
 import Point
 import Data.Graph
@@ -46,12 +47,10 @@ cyclics g = M.toList <$> do
     return $ M.intersection g'' a'
 
 
-
 shiftCeil :: Diameter -> Diameter -> F Point -> Ceil3 -> [(Ceil3, Double)]
 shiftCeil d1 d2 fp (Ceil3 c l) = myNub $ do
     let Point x y = fromCeil d1 c
-    pure ret
-        <*> mySequence x d1
+    ret <$> mySequence x d1
         <*> mySequence y d1
         <*> mySequence (rad d2 l) (pi/2/d2)
   where

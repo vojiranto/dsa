@@ -6,6 +6,7 @@ import Data.Matrix (Matrix(..))
 
 import Data
 import Point
+import Data.Complex
 import SymbolicImage
 import Jac (jac, e)
 
@@ -35,16 +36,17 @@ celling (Ceil3 c i) = [Ceil3 c (i*2), Ceil3 c (i*2-1)]
 shiftCeil :: Diameter -> Diameter -> F Point -> Ceil3 -> [Ceil3]
 shiftCeil d1 d2 fp (Ceil3 c l) = myNub $ do
     let Point x y = fromCeil d1 c
-    pure (func d1 d2 fp)
-        <*> (mySequence x d1)
-        <*> (mySequence y d1)
-        <*> (mySequence (rad d2 l) (pi/2/d2))
+    func d1 d2 fp
+        <$> mySequence x d1
+        <*> mySequence y d1
+        <*> mySequence (rad d2 l) (pi/2/d2)
 
 
+func :: Double -> Double -> F Point -> Double -> Double -> Double -> Ceil3
 func d1 d2 fp x y t = Ceil3 (ceil d1 fp x y) (int d2 (arcOf fp x y t))
 
 arcOf :: F Point -> Double -> Double -> Double -> Double
-arcOf fp x y t = arc $ signum $ toPoint $ jacobian fp x y * e t
+arcOf fp x y t = arc $ toPoint $ jacobian fp x y * e t
 
 
 ceil :: Double -> F Point -> Double -> Double -> Ceil
@@ -57,10 +59,10 @@ jacobian fp x y = jac fp $ Point x y
 
 arc :: Point -> Double
 arc (Point x y) = if
-    | y > 0, x > 0 -> acos x
-    | x > 0        -> negate $ acos x
-    | y > 0        -> acos $ negate x
-    | otherwise    -> negate $ acos $ negate x
+    | x >  0    ->       phase $          x :+ y
+    | x == 0    -> abs $ phase $          x :+ y
+    | otherwise ->       phase $ negate $ x :+ y
+
 
 int :: Double -> Double -> Int
 int d r = ceiling $ r/pi*2*d

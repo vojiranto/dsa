@@ -3,7 +3,9 @@ module Main where
 
 import Graph
 import Point
+import Shift
 import Control.Monad
+import Control.Monad.Extra
 import SymbolicImage
 import Stratification
 import Control.Monad.ST as ST
@@ -11,6 +13,7 @@ import Data.IntMap      as IM
 import Data.Array.ST    as SA
 import Data.Array       as A
 import Data.Set         as S
+import Test.QuickCheck
 
 main = do
     putStrLn ""
@@ -27,6 +30,9 @@ main = do
     unless test10 $ print "Err 10"
     unless test11 $ print "Err 11"
     unless test12 $ print "Err 12"
+    unless test13 $ print "Err 13"
+    quickCheck
+        (\x y -> abs (shift fx1 (Point x y) - shift fx2 (Point x y)) < 1e-10)
     return $! testCir1
     return $! testCir2
     return $! testCir3
@@ -34,12 +40,12 @@ main = do
     return $! testCir5
     print "Ok!"
 
+fx1 = "1 + 0.3*y - 1.4 * pot(x, 2)"
+fx2 = "1 - 1.4 * pot(x, 2) + 0.3*y"
+
 test1 = testPreced S.empty arr1 3 4 -- True
 test2 = testPreced S.empty arr2 2 3 -- False
 test3 = testPreced s1      arr2 2 3 -- False
-
-
-
 
 -- контур замыкается по дереву.
 test4 = cir11 == testCircuit 1 arr1 gr1 cir11 -- True
@@ -62,6 +68,8 @@ test10 = (-1 == minOptZ gr (minBazeCircuit gr))
 test11 = 4 == (length $ pure Point <*> [1, 2] <*> [1, 2])
 
 test12 = 10 == int 40 (rad 40 10)
+
+test13 = reverse [-0.25, 0..1.25] == mySequence 1 1
 
 testPreced set arr i1 i2 = runST $ do
     tree <- makeTree arr

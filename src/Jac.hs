@@ -6,6 +6,7 @@
 module Jac where
 
 import Data.Matrix (Matrix(..), fromLists, fromList, toList)
+import Data.Complex
 
 import Point
 import Data (F)
@@ -42,13 +43,13 @@ jac' f p@(Point x' y') = log $ abs $
 
 -- единичный вектор.
 e :: Double -> Matrix Double
-e f = fromList 2 1 [cos f, sin f]
-
+e f = fromList 2 1 [realPart x, imagPart x]
+  where x = cis f
 
 -- см. стр. 102. в книге 1.
 formA :: F Point -> Point -> Double -> Double
 formA f p k = log.abs.toList $ (jac f p) * e k
-    where abs [x, y] = sqrt $ x^2 + y^2
+    where abs [x, y] = magnitude $ x :+ y
 
 -----------------------------------------------------------------
 -- преобразование вектора в точку.

@@ -47,6 +47,8 @@ stepImagination' fp (Imagination d c) = Imagination (d/2) $!
         (shiftCeil 4 (d/2) fp #=)
         (celling d c)
 
+
+(#=) :: (a -> b) -> a -> (a, a, b)
 (#=) !f !c = (c, c, f c)
 
 
@@ -83,31 +85,23 @@ toRad d x = d * fromIntegral x
 shiftCeil :: Double -> Diameter -> F Point -> Ceil -> [Ceil]
 shiftCeil k d fp p = myNub $ parMap rseq (toCeil d.fp) $ do
     let Point x y = fromCeil d p
-    return Point <*> (mySequence x d) <*> (mySequence y d)
+    Point <$> mySequence x d <*> mySequence y d
 
 
 bazeImagination :: Space -> Imagination
-bazeImagination s = Imagination 1 $! formBaze s 1
+bazeImagination s = Imagination 1 $! formBaze s
 
 
 -- Построение базового разбиения.
-formBaze :: Space -> Diameter -> [Ceil]
-formBaze (Space (Point x1 y1) (Point x2 y2)) d = do
-    x <- [x1, x1+d..x2]
-    y <- [y1, y1+d..y2]
-    return $! formCeil x y d
-
+formBaze :: Space -> [Ceil]
+formBaze (Space (Point x1 y1) (Point x2 y2)) =
+    formCeil <$> [x1..x2] <*> [y1..y2] <*> [1]
 
 -- Произведение разбиение сетки ячеек на более мелкую.
 celling :: Diameter -> F [Ceil]
 celling !d = concatMap $! \c -> do
     let Point x y = fromCeil d c
-        x' = x - d
-        y' = y - d
-        d' = d/2
-    x' <- [x', x'+d'..x]
-    y' <- [y', y'+d'..y]
-    return $! formCeil x' y' d'
+    formCeil <$> [x-d, x-d/2, x] <*> [y-d, y-d/2, y] <*> [d/2]
 
 
 -- Накладываю более строгие требования на входные
@@ -116,10 +110,9 @@ celling !d = concatMap $! \c -> do
 myNub :: Ord a => F [a]
 myNub x = Set.toList . Set.fromList $! x
 
+
 mySequence :: Double -> Double -> [Double]
-mySequence t d = do
-    d' <- (d*) <$> [-0.25, 0..1.25]
-    return $ t - d'
+mySequence t d = [t - d*x | x <- [-0.25, 0..1.25]]
 
 
 -- определяем кол-во ячеек.

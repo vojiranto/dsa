@@ -17,6 +17,7 @@ import Data.List        as L
 import Data.Maybe       as MB
 import Data.Array.MArray
 import Control.Monad
+import Control.Monad.Extra
 import Data.Function
 import Data.Monoid
 import Data.STRef
@@ -104,6 +105,10 @@ bazeCircuit cmp gr = head $ separation $ ribs stDo minRibs
         loop $ S.toList $ S.difference
             -- s0 = A \ s1
             (S.fromList [1..n]) (S.fromList $! fst <$!> pots)
+
+{-#INLINE mLoop#-}
+mLoop :: Monad m => a -> (a -> m (Either a b)) -> m b
+mLoop = flip loopM
 
 jLookup i n = fromJust $ i `IM.lookup` n
 
@@ -209,10 +214,7 @@ groupEq f = groupBy ((==)`on`f) . sortBy (compare`on`f)
 modifyArray :: (MArray array elem m, Ix index) =>
     array index elem -> index -> (elem -> elem) -> m ()
 {-#INLINE modifyArray#-}
-modifyArray a i f = do
-    e <- readArray a i
-    writeArray a i (f e)
-
+modifyArray a i f = writeArray a i .f =<< readArray a i
 
 -----------------------------------------------------------------
 --                                                             --
@@ -252,6 +254,8 @@ cOf gr a b = case b`IM.lookup`(gr A.! a) of
 -- разбираем кортеж на запчасти.
 fst3 (a, _, _) = a ; snd3 (_, a, _) = a ;tr3  (_, _, a) = a
 
+-- убераем потенциал у ребра.
+toJ (i1, i2, _) = (i1, i2)
 
 minOptZ gr c = runST $ optZ' gr c
 
@@ -274,11 +278,7 @@ optZ' gr cir = let
     -- (4.2) создаём дерево по контуру.
     -- NOTE  у Петренок в алгоритме нет этого пункта (sic!)
     tree <- newArray (bounds gr) 0 :: ST s (STArray s Int Int)
-    let -- наличие ребра i1i2 <=> наличию e i2 предка i1
-        addToTree (i1, i2) = writeArray tree i2 i1
-
-    -- добавляем в дерево рёбра из nc.
-    forM_ (init nc) $ \(i1, i2, _) -> addToTree (i1, i2)
+    forM_ (init nc) $ addTo tree.toJ
 
     -- (5)
     nc <- newSTRef $ init nc
@@ -326,7 +326,7 @@ optZ' gr cir = let
                                 -- добавить посчитанный потенциал.
                                 modifySTRef p (IM.insert i2 w)
                                 -- добавляем ветвь в дерево
-                                addToTree j
+                                addTo tree j
                                 -- убираем вершину из незадействованных
                                 modifySTRef m2 (S.delete i2)
                                 -- вносим в очередь на обработку
@@ -340,12 +340,8 @@ optZ' gr cir = let
                             -- (***)
                             | prec  -> do
                                 -- дописываем замыкающее контур ребро
-                                addToTree j
-                                cir' <- сircuit i2 tree gr cir
-                                --if counter < 100
-                                --then
-                                loop1 cir'
-                                --else return z
+                                addTo tree j
+                                loop1 =<< сircuit i2 tree gr cir
                             -- (***.2)
                             | j`S.member`st' -> loop3 i2s
                             | otherwise -> do
@@ -361,7 +357,7 @@ optZ' gr cir = let
                                 --      предка мы одновременно
                                 --      и убираем какую-то другую
                                 --      дугу
-                                addToTree j
+                                addTo tree j
                                 -- если вершина уже отброшена =>
                                 -- вернуть в очередь на обработку.
                                 when (i2 `S.member` m0') $ do
@@ -371,13 +367,18 @@ optZ' gr cir = let
                                 modifySTRef m1 (lDelete i2)
                                 modifySTRef m1 (cons i2)
                                 loop3 i2s
-                    loop3 _  = do
-                        loop2
+                    loop3 _  = loop2
                 loop3 (fst <$> (IM.toList $ gr A.! i1))
             -- (8)
             else return z
     loop2
   in loop1 cir
+
+
+-- наличие ребра i1i2 <=> наличию e i2 предка i1
+addTo :: (MArray array Int m) => array Int Int -> (Int, Int) -> m ()
+addTo tree (i1, i2) = writeArray tree i2 i1
+
 
 printF a = return $! unsafePerformIO $! print a
 -- предшествует ли вершина i1 вершине i2?
@@ -386,9 +387,7 @@ printF a = return $! unsafePerformIO $! print a
 preceded :: forall m arr. MArray arr Int m =>
     Int -> Int -> arr Int Int -> Set Int -> m Bool
 preceded i2 i1 tree smc = do
-    b1 <- return   $ i2 `S.member` smc
-    b2 <- preceded' i1 0
-    return $ b1 || b2
+    pure (i2 `S.member` smc ||) <*> preceded' i1 0
   where
     -- i под i2
     preceded' ::  Int -> Int -> m Bool
@@ -403,12 +402,6 @@ preceded i2 i1 tree smc = do
             | i' == i2     -> return True
             -- иначе посмотртреть, кто над следующим.
             | otherwise    -> preceded' i' (count + 1)
-
--- явлется ли вершина i1 родителем для i2.
-isPrecedFor :: MArray arr Int m => Int -> Int ->arr Int Int -> m Bool
-isPrecedFor i1 i2 tree = do
-    pr <- readArray tree i2
-    return $ i2 == pr
 
 
 -- выделяем контур.
