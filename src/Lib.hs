@@ -3,7 +3,7 @@
     ScopedTypeVariables,
     BangPatterns,
     MultiWayIf#-}
-module Lib (someFunc) where
+module Lib (someFunc, cathF) where
 
 import Graphics.UI.Gtk hiding (Point)
 import Graphics.UI.Gtk.Gdk.GC
@@ -26,36 +26,37 @@ defaultBgColor = Color 0 0 0
 
 renderScene d lims p ev = do
     dw           <- widgetGetDrawWindow d
-    (xMax, yMax) <- readIORef lims
+    (xMin, yMin, xMax, yMax) <- readIORef lims
     Imagination d' p <- readIORef p
 
     (w, h) <- widgetGetSize d
     gc     <- gcNew dw
     let fg = color 0 0 0
     gcSetValues gc $ newGCValues { foreground = fg }
-    let wM = round (xMax * 2)
-        hM = round (yMax * 2)
+    let wM = round $ max (xMax * 2) (abs xMin * 2)
+        hM = round $ max (yMax * 2) (abs yMin * 2)
         tr (x, y) = (
             round (x *        toEnum w) `div` wM + w`div`2,
             round (y * (-1) * toEnum h) `div` hM + h`div`2)
         drawLine' x y = drawLine dw gc (tr x) (tr y)
+
+    [xMax, yMax] <- pure
+        [max xMax (abs xMin), max yMax (abs yMin)]
 
     -- Оси OX и OY
     drawLine' (0, -yMax) (0, yMax)
     drawLine' (-xMax, 0) (xMax, 0)
 
     -- Насечки (мелкие)
-    forM_ [-xMax, -xMax+0.1..xMax] $ \i -> do
+    forM_ [-xMax, -xMax+0.1..xMax] $ \i ->
         drawLine' (i, 0.01) (i, -0.01)
-    forM_ [-yMax, -yMax+0.1..yMax] $ \i -> do
+    forM_ [-yMax, -yMax+0.1..yMax] $ \i ->
         drawLine' (0.01, i) (-0.01, i)
 
     -- насечки крупные
-    forM_ [-xMax..xMax] $ \i -> do
-        drawLine' (i, 0.1) (i, -0.1)
+    forM_ [-xMax..xMax] $ \i -> drawLine' (i, 0.1) (i, -0.1)
 
-    forM_ [-yMax..yMax] $ \i -> do
-        drawLine' (0.1, i) (-0.1, i)
+    forM_ [-yMax..yMax] $ \i -> drawLine' (0.1, i) (-0.1, i)
 
     let pTr (Point x y) = tr (x, y)
     drawPoints dw gc $ pTr.fromCeil d' <$> p
@@ -70,7 +71,7 @@ someFunc = do
     hl@[h0, h1, h2, h3,hx,hy, h4, h5, hs1, hs2,her] <- forM [1..11] $
         const (hBoxNew False 4)
     [   ar1, ar2, ar3,
-        arX, arY] <- forM [1..5] (const entryNew)
+        arX1, arX2, arY1, arY2] <- forM [1..7] (const entryNew)
     drawing <- drawingAreaNew
 
     set window [
@@ -85,21 +86,23 @@ someFunc = do
 
     setСontainers vBox hl
     setLabelNew h0 "Введите формулы"
-    extr h1 ar1 "x' = " "1 + 0.3*y - 1.4 * pot(x, 2)"
-    extr h2 ar2 "y' = " "x"
+    extr h1 ar1 "Fx = " "y - 1.4 * x * x + 1"
+    extr h2 ar2 "Fy = " "0.3 * x"
 
+    forM_ [arX1, arX2, arY1, arY2] $ \l ->
+        entrySetWidthChars l 8
 
-    extr hx arX "x max = "          "2"
-    extr hy arY "y max = "          "2"
+    extr hx arX1 "x min = "         "-2"
+    extr hx arX2 "x max = "          "2"
+    extr hy arY1 "y min = "         "-1"
+    extr hy arY2 "y max = "          "1"
     extr h3 ar3 "Число итераций = " "7"
 
     [b1, b2] <- buttons h4 ["Образ", "Дополнительная итерация"]
     [b3]     <- buttons h5 ["Спектр Морса"]
 
     -- поля для вывода крайних значний спектра Морса.
-    let stList = ["min: -- ", "max: -- "]
-    [sp1Min, sp1Max] <- forM stList (setLabelNew hs1)
-    [sp2Min, sp2Max] <- forM stList (setLabelNew hs2)
+    spMorse <- setLabelNew hs1 ""
 
     -- Настраиваем упаковку аплетов
     boxSetChildPacking hBox vBox PackNatural 4 PackStart
@@ -112,33 +115,31 @@ someFunc = do
     widgetModifyBg drawing StateNormal bg
 
     -- Переиенные.
-    r <- newIORef (1.5, 1)
+    r <- newIORef (-1.5 :: Double, -1 :: Double, 1.5 :: Double, 1 :: Double)
     i <- newIORef $ Imagination 1 []
 
     onExpose drawing (renderScene drawing r i)
 
     -- Нажимаем на кнопку "Образ"
     onClicked b1 $ do
-        [x',y',xMax, yMax, nInt] <- mapM entryGetText
-            [ar1, ar2, arX, arY, ar3]
+        [x',y',xMin, yMin, xMax, yMax, nInt] <- mapM entryGetText
+            [ar1, ar2, arX1, arY1, arX2, arY2, ar3]
 
         -- TODO Переработать обнаружение этой ошибки.
         !t <- cathF (\p -> Point (shift x' p) (shift y' p)) $ Point 0 0
         -- XXX Если использовать не список, и выставить аргументы
         --     в ином порядке, то перестанет ловить ошибки.
-        l@[nInt, xMax, yMax] <- mapM catchRead [nInt, xMax, yMax]
+        l@[nInt, xMin, yMin, xMax, yMax] <- mapM catchRead [nInt, xMin, yMin, xMax, yMax]
         if isJust t && all isJust l then do
             -- разворачиваем
-            [Just nInt, Just xMax, Just yMax] <- pure l
+            [nInt, xMin, yMin, xMax, yMax] <- pure $ mapMaybe id l
 
-            writeIORef r (xMax, yMax)
+            writeIORef r (xMin, yMin, xMax, yMax)
             widgetDestroy drawing
 
             let f p        = Point (shift x' p) (shift y' p)
-                sp         = Space
-                    (Point (-1 * xMax) (-1 * yMax))
-                    (Point       xMax        yMax )
-                (image, i') = formImagination f sp !! (fromEnum nInt)
+                sp         = Space (Point xMin yMin) (Point xMax yMax)
+                (image, i') = formImagination f sp !! fromEnum nInt
 
             writeIORef i image
 
@@ -146,15 +147,17 @@ someFunc = do
             void $ onExpose drawing (renderScene drawing r i)
         else if
             -- TODO настроить выдачу сообщений о ошибках
-            | not.isJust $ xMax -> pure ()
-            | not.isJust $ yMax -> pure ()
-            | not.isJust $ nInt -> pure ()
-            | not.isJust $ t    -> pure ()
+            | isNothing xMax -> pure ()
+            | isNothing yMax -> pure ()
+            | isNothing xMin -> pure ()
+            | isNothing yMin -> pure ()
+            | isNothing nInt -> pure ()
+            | isNothing t    -> pure ()
         widgetShowAll window
 
     onClicked b2 $ do
         [x',y',xMax, yMax, nInt] <- mapM entryGetText
-            [ar1, ar2, arX, arY, ar3]
+            [ar1, ar2, arX2, arY2, ar3]
         im <- readIORef i
 
         -- TODO Переработать обнаружение этой ошибки.
@@ -169,8 +172,8 @@ someFunc = do
         widgetShowAll window
 
     onClicked b3 $ do
-        [x',y',xMax, yMax, nInt] <- mapM entryGetText
-            [ar1, ar2, arX, arY, ar3]
+        [x',y',xMin, yMin, xMax, yMax, nInt] <- mapM entryGetText
+            [ar1, ar2, arX1, arY1, arX2, arY2, ar3]
         im <- readIORef i
 
         -- TODO Переработать обнаружение этой ошибки.
@@ -178,7 +181,7 @@ someFunc = do
         when (isJust t) $ do
             let f p       = Point (shift x' p) (shift y' p)
             -- вычисление спектра морса
-            print $ morse f im 4
+            labelSetText spMorse (unlines $ map show $ morse f im 4)
             return ()
         widgetShowAll window
 
@@ -195,8 +198,7 @@ color r g b = Color
 
 
 -- Элементы  интерфейса.
-setСontainers a b = do
-    set a $ (containerChild :=) <$> b
+setСontainers a b = set a $ (containerChild :=) <$> b
 
 
 extr hBox ar txt1 txt2 = do
@@ -226,4 +228,5 @@ cathF :: (a -> b) -> a -> IO (Maybe b)
 cathF f x = catch
     (pure $! Just $! f $! x)
     (\(_ :: SomeException) -> pure Nothing)
+
 

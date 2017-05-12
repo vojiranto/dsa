@@ -34,8 +34,8 @@ jac f p@(Point x' y') = fromLists [
 
 jac' :: F Point -> Point -> Double
 jac' f p@(Point x' y') = log $ abs $
-    (diff (\a -> f1 p{x = a}) x')*(diff (\a -> f2 p{y = a}) y')
-  - (diff (\a -> f1 p{y = a}) y')*(diff (\a -> f2 p{x = a}) x')
+    diff (\a -> f1 p{x = a}) x'*diff (\a -> f2 p{y = a}) y'
+  - diff (\a -> f1 p{y = a}) y'*diff (\a -> f2 p{x = a}) x'
   where
     f1 = x.f ; f2 = y.f
 
@@ -48,7 +48,7 @@ e f = fromList 2 1 [realPart x, imagPart x]
 
 -- см. стр. 102. в книге 1.
 formA :: F Point -> Point -> Double -> Double
-formA f p k = log.abs.toList $ (jac f p) * e k
+formA f p k = log.abs.toList $ jac f p * e k
     where abs [x, y] = magnitude $ x :+ y
 
 -----------------------------------------------------------------

@@ -4,6 +4,8 @@ module Main where
 import Graph
 import Point
 import Shift
+import Lib
+import Data
 import Control.Monad
 import Control.Monad.Extra
 import SymbolicImage
@@ -31,6 +33,14 @@ main = do
     unless test11 $ print "Err 11"
     unless test12 $ print "Err 12"
     unless test13 $ print "Err 13"
+    print $ formBaze (Space (Point 0 0)(Point 1 2))
+
+    bool <- ((== Nothing) <$> cathF (cOf gr2 3) 2)
+    unless bool $ print "Err 14"
+    quickCheck
+        (\(x :: Double)
+          (y :: Double) -> x > y >.>  (x+5)/100 > (y+5)/2)
+
     quickCheck
         (\x y -> abs (shift fx1 (Point x y) - shift fx2 (Point x y)) < 1e-10)
     return $! testCir1
@@ -70,6 +80,7 @@ test11 = 4 == (length $ pure Point <*> [1, 2] <*> [1, 2])
 test12 = 10 == int 40 (rad 40 10)
 
 test13 = reverse [-0.25, 0..1.25] == mySequence 1 1
+
 
 testPreced set arr i1 i2 = runST $ do
     tree <- makeTree arr
@@ -125,7 +136,7 @@ testCir5 = runST $ do
 -----------------------------------------------------------------
 
 makeTree arr = do
-    let n = maximum $ plat arr
+    let n = maximum $ plat' arr
     tree <- newArray (1, n) 0 :: ST s (STArray s Int Int)
     forM_ arr $ \(a, b) -> writeArray tree b a
     return tree
@@ -152,8 +163,8 @@ makeSimpleCirT f x = makeSimpleCir' (x ++ [head x])
     makeSimpleCir' (x:y:xs) = f (x, y):makeSimpleCir' (y:xs)
     makeSimpleCir' _        = []
 
-plat :: [(a, a)] -> [a]
-plat list = concat $ do
+plat' :: [(a, a)] -> [a]
+plat' list = concat $ do
     (a, b) <- list
     return [a, b]
 
@@ -162,6 +173,12 @@ formGr :: Double -> [(Int, [Int])] -> Array Int (IntMap Double)
 formGr i gr = array (1 , maximum gr') $ (formSimpleNode i <$> gr)
   where gr' = concat $ (\(a, b) -> a:b) <$> gr
 
+infix 1 >.>
+
+-- импликация
+(>.>) :: Bool -> Bool -> Bool
+(>.>) True  False = False
+(>.>) _     _     = True
 
 -----------------------------------------------------------------
 --                          DATA                               --

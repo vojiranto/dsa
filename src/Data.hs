@@ -57,7 +57,7 @@ data Ceil = Ceil {-# UNPACK #-} !Int {-# UNPACK #-} !Int
 data Ceil3 = Ceil3  {-# UNPACK #-} !Ceil  {-# UNPACK #-}  !Int
   deriving (Eq, Ord, Show)
 
-data Imagination = Imagination  {-# UNPACK #-}  !Diameter ![Ceil]
+data Imagination = Imagination  {-# UNPACK #-}  !Diameter  ![Ceil]
   deriving Eq
 
 -- Расслоение

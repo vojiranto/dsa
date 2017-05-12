@@ -5,6 +5,7 @@ module SymbolicImage (
     stepImagination',
     cyclics,
     fromRad,
+    formBaze,
     toRad,
     myNub,
     fromCeil,
@@ -95,13 +96,14 @@ bazeImagination s = Imagination 1 $! formBaze s
 -- Построение базового разбиения.
 formBaze :: Space -> [Ceil]
 formBaze (Space (Point x1 y1) (Point x2 y2)) =
-    formCeil <$> [x1..x2] <*> [y1..y2] <*> [1]
+    formCeil <$> [x1+1..x2] <*> [y1+1..y2] <*> [1]
+
 
 -- Произведение разбиение сетки ячеек на более мелкую.
 celling :: Diameter -> F [Ceil]
-celling !d = concatMap $! \c -> do
+celling !d = concatMap $ \c -> do
     let Point x y = fromCeil d c
-    formCeil <$> [x-d, x-d/2, x] <*> [y-d, y-d/2, y] <*> [d/2]
+    formCeil <$> [x-d/2, x] <*> [y-d/2, y] <*> [d/2]
 
 
 -- Накладываю более строгие требования на входные
